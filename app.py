@@ -279,7 +279,6 @@ STOP_WORDS = {
     "y",
 }
 
-
 def normalizar(texto):
     if not texto:
         return ""
@@ -351,7 +350,6 @@ def obtener_precio_paquete(pkg):
         return pkg.get("precio", 0.0)
     return 0.0
 
-
 def generar_pdf_binario(nombre_paciente, desc_general_pct, vigencia_texto):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -411,11 +409,24 @@ def generar_pdf_binario(nombre_paciente, desc_general_pct, vigencia_texto):
         alignment=2,
     )
 
-    story = []
-    ahora = datetime.now().strftime("%d/%m/%Y %H:%M")
+    style_leyenda = ParagraphStyle(
+        "LeyendaDH",
+        parent=style_normal,
+        fontName="Helvetica-Oblique",
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor("#475569"),
+    )
 
-    # Búsqueda flexible de la imagen del logo en la carpeta
-    rutas_posibles_logo = ["LOGO BIOMEGEN.png", "LOGO BIOMEGEN_2.png"]
+    story = []
+    # SOLO LA FECHA (SIN HORA)
+    ahora = datetime.now().strftime("%d/%m/%Y")
+
+    rutas_posibles_logo = [
+        "LOGO BIOMEGEN SF.png",
+        "LOGO BIOMEGEN.png",
+        "LOGO BIOMEGEN_2.png",
+    ]
     ruta_logo_final = None
     for r in rutas_posibles_logo:
         if os.path.exists(r):
@@ -426,7 +437,7 @@ def generar_pdf_binario(nombre_paciente, desc_general_pct, vigencia_texto):
         p_logo = Image(ruta_logo_final, width=180, height=45)
     else:
         p_logo = Paragraph(
-            "<b>BIOMEGEN</b><br/><font size=8 color='#0284c7'>LAB GENÓMICO</font>",
+            "<b>BIOMEGEN</b><br/><font size=8 color='#094A73'>LAB GENÓMICO</font>",
             style_cell_bold,
         )
 
@@ -608,10 +619,13 @@ def generar_pdf_binario(nombre_paciente, desc_general_pct, vigencia_texto):
     )
     story.append(t_indicaciones)
 
+    # LEYENDA D.H. AL FINAL DE LA PÁGINA
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("* D.H. = Día Hábil", style_leyenda))
+
     doc.build(story)
     buffer.seek(0)
     return buffer.getvalue()
-
 
 # -------------------------------------------------------------
 # MEMORIA DE SESIÓN
