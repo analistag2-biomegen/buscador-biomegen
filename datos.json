@@ -168,6 +168,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       }
@@ -220,6 +221,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       }
@@ -245,6 +247,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -290,6 +293,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -317,6 +321,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)",
@@ -5471,6 +5476,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -5523,6 +5529,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -5582,6 +5589,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -5613,6 +5621,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -5633,6 +5642,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)",
@@ -7318,6 +7328,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -7370,6 +7381,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -7429,6 +7441,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -7460,6 +7473,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -7480,6 +7494,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)",
@@ -8536,6 +8551,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -8588,6 +8604,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -8647,6 +8664,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -8678,6 +8696,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -8698,6 +8717,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)",
@@ -9804,6 +9824,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -9856,6 +9877,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -9915,6 +9937,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -9946,6 +9969,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -9966,6 +9990,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)",
@@ -11092,6 +11117,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -11144,6 +11170,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -11203,6 +11230,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -11234,6 +11262,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -11254,6 +11283,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)",
@@ -12551,6 +12581,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -12603,6 +12634,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -12662,6 +12694,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -12693,6 +12726,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -12713,6 +12747,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)",
@@ -13960,6 +13995,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -14019,6 +14055,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -15009,6 +15046,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -15068,6 +15106,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -16072,6 +16111,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -17035,6 +17075,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -17087,6 +17128,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -17146,6 +17188,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -17177,6 +17220,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -17197,6 +17241,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)",
@@ -18291,6 +18336,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -18455,6 +18501,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -18514,6 +18561,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -18965,6 +19013,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -19024,6 +19073,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -19201,6 +19251,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -19260,6 +19311,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -19437,6 +19489,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -19496,6 +19549,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -19900,6 +19954,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -19959,6 +20014,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -19990,6 +20046,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -21036,6 +21093,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -21095,6 +21153,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -21126,6 +21185,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -22172,6 +22232,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -22231,6 +22292,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -22262,6 +22324,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -23308,6 +23371,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -23367,6 +23431,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -24341,6 +24406,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -24400,6 +24466,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -24431,6 +24498,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -25492,6 +25560,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -25551,6 +25620,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -26455,6 +26525,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -26514,6 +26585,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -26545,6 +26617,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -27577,6 +27650,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -27636,6 +27710,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -27667,6 +27742,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -28728,6 +28804,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -28787,6 +28864,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -29653,6 +29731,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -30475,6 +30554,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -30898,6 +30978,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -31162,6 +31243,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -31221,6 +31303,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -31252,6 +31335,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -32243,6 +32327,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -32302,6 +32387,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -32333,6 +32419,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -33324,6 +33411,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -33383,6 +33471,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -33414,6 +33503,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -34405,6 +34495,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -34464,6 +34555,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -34495,6 +34587,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -35884,6 +35977,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -35943,6 +36037,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -35974,6 +36069,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -36732,6 +36828,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -36791,6 +36888,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -36822,6 +36920,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -37580,6 +37679,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -37639,6 +37739,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -38364,6 +38465,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -38423,6 +38525,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -39411,6 +39514,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -39470,6 +39574,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -39501,6 +39606,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -40428,6 +40534,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -40487,6 +40594,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -42040,6 +42148,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -42099,6 +42208,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -42687,6 +42797,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -42746,6 +42857,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -43672,6 +43784,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -44098,6 +44211,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -44627,6 +44741,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -45156,6 +45271,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -46144,6 +46260,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -46346,6 +46463,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -47685,6 +47803,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -47959,6 +48078,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -48154,6 +48274,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -56219,6 +56340,194 @@
     "tipo": "paquete",
     "paquetes": [
       {
+        "nombre": "Check-up 44",
+        "precio": 1900.0,
+        "definicion": "Chequeo médico de máxima cobertura cuantitativa que evalúa exhaustivamente el funcionamiento global del organismo, ideal para un diagnóstico preventivo profundo o un control de salud anual completo.",
+        "tipo_muestra": "Sangre total/EDTA, Suero 2 mL y primera orina del día.",
+        "tiempo_entrega": "Mismo día",
+        "indicaciones": "Ayuno de 6 horas",
+        "analitos_incluidos": [
+          "Glucosa sérica",
+          "Urea sérica",
+          "Nitrógeno ureico sérico (BUN)",
+          "Creatinina sérica",
+          "Ácido úrico sérico",
+          "Colesterol total",
+          "Colesterol HDL",
+          "Colesterol LDL",
+          "Colesterol VLDL",
+          "Triglicéridos",
+          "Lípidos totales",
+          "Índice aterogénico",
+          "Riesgo aterogénico I",
+          "Riesgo aterogénico II",
+          "Riesgo aterogénico III",
+          "Bilirrubina total",
+          "Bilirrubina conjugada (directa)",
+          "Bilirrubina no conjugada (indirecta)",
+          "ALT/TGP (alanina amino transferasa)",
+          "AST/TGO (aspartato amino transferasa)",
+          "GGT (gamma glutamil transpeptidasa)",
+          "ALP (fosfatasa alcalina)",
+          "DHL (deshidrogenasa láctica)",
+          "Amilasa en suero",
+          "Lipasa sérica",
+          "Creatinfosfoquinasa (CPK)",
+          "Creatinfosfoquinasa CK-MB",
+          "Proteínas totales",
+          "Albúmina sérica",
+          "Globulina",
+          "Relación albúmina-globulina",
+          "Sodio sérico",
+          "Potasio sérico",
+          "Cloro sérico",
+          "Calcio en suero",
+          "Fósforo sérico",
+          "Magnesio sérico",
+          "Hierro sérico",
+          "Ferritina",
+          "Transferrina",
+          "Capacidad total de fijación de hierro",
+          "% de saturación",
+          "Proteína C reactiva",
+          "Antiestreptolisinas (AEL)",
+          "Factor reumatoide",
+          "Inmunoglobulina IgA",
+          "Inmunoglobulina IgM",
+          "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
+          "Examen general de orina (EGO)"
+        ]
+      },
+      {
+        "nombre": "Check-up Avanzado",
+        "precio": 1500.0,
+        "definicion": "Perfil preventivo integral de mayor precisión que amplía la revisión de la función renal, hepática y metabólica, sirviendo para identificar riesgos cardiovasculares o desequilibrios orgánicos tempranos.",
+        "tipo_muestra": "Sangre total/EDTA, Suero 2 mL y primera orina del día.",
+        "tiempo_entrega": "Mismo día",
+        "indicaciones": "Ayuno de 6 horas, primer orina de la mañana",
+        "analitos_incluidos": [
+          "Glucosa sérica",
+          "Urea sérica",
+          "Nitrógeno ureico sérico (BUN)",
+          "Creatinina sérica",
+          "Ácido úrico sérico",
+          "Colesterol total",
+          "Colesterol HDL",
+          "Colesterol LDL",
+          "Triglicéridos",
+          "Índice aterogénico",
+          "Riesgo aterogénico I",
+          "Riesgo aterogénico II",
+          "Riesgo aterogénico III",
+          "Bilirrubina total",
+          "Bilirrubina conjugada (directa)",
+          "Bilirrubina no conjugada (indirecta)",
+          "ALT/TGP (alanina amino transferasa)",
+          "AST/TGO (aspartato amino transferasa)",
+          "GGT (gamma glutamil transpeptidasa)",
+          "ALP (fosfatasa alcalina)",
+          "DHL (deshidrogenasa láctica)",
+          "Amilasa en suero",
+          "Proteínas totales",
+          "Albúmina sérica",
+          "Globulina",
+          "Relación albúmina-globulina",
+          "Sodio sérico",
+          "Potasio sérico",
+          "Cloro sérico",
+          "Calcio en suero",
+          "Fósforo sérico",
+          "Magnesio sérico",
+          "Hierro sérico",
+          "Ferritina",
+          "Biometría hemática (BH)",
+          "Examen general de orina (EGO)"
+        ]
+      },
+      {
+        "nombre": "Check-up Básico",
+        "precio": 720.0,
+        "definicion": "Evaluación médica preventiva fundamental que analiza el estado sanguíneo, metabólico y urinario básico para detectar a tiempo problemas como anemia, alteraciones de la glucosa o infecciones urinarias.",
+        "tipo_muestra": "Sangre total/EDTA, Suero 2 mL y primera orina del día.",
+        "tiempo_entrega": "Mismo día",
+        "indicaciones": "Ayuno de 6 horas, primer orina de la mañana",
+        "analitos_incluidos": [
+          "Glucosa sérica",
+          "Urea sérica",
+          "Nitrógeno ureico sérico (BUN)",
+          "Creatinina sérica",
+          "Ácido úrico sérico",
+          "Colesterol total",
+          "Triglicéridos",
+          "Biometría hemática (BH)",
+          "Examen general de orina (EGO)",
+          "Anticuerpos Hepatitis A IgG / IgM",
+          "Antígeno de Superficie de la Hepatitis B (HBsAg)",
+          "Hepatitis B Ac. (HBs Ac)",
+          "Anticuerpos Core Hepatitis B (HBcAc IgG/IgM)",
+          "Hepatitis B Ag. e Ac. (HBeAg / HBeAc)",
+          "Anticuerpos Hepatitis C (HCV)",
+          "Ac. Anti Hepatitis D (HDV)"
+        ]
+      },
+      {
+        "nombre": "Check-up Infantil",
+        "precio": 1600.0,
+        "definicion": "Evaluación integral para etapas de crecimiento en edad escolar que sirve para monitorear la salud nutricional, el metabolismo general, la función hepático-renal y descarta parasitosis o infecciones.",
+        "tipo_muestra": "Sangre total/EDTA, Suero, muestra de heces y primera orina del día.",
+        "tiempo_entrega": "Mismo día",
+        "indicaciones": "Ayuno de 12 horas, primer orina de la mañana",
+        "analitos_incluidos": [
+          "Glucosa sérica",
+          "Urea sérica",
+          "Nitrógeno ureico sérico (BUN)",
+          "Creatinina sérica",
+          "Ácido úrico sérico",
+          "Colesterol total",
+          "Triglicéridos",
+          "Bilirrubina total",
+          "Bilirrubina conjugada (directa)",
+          "Bilirrubina no conjugada (indirecta)",
+          "AST/TGO (aspartato amino transferasa)",
+          "ALP (fosfatasa alcalina)",
+          "DHL (deshidrogenasa láctica)",
+          "Proteínas totales",
+          "Albúmina sérica",
+          "Globulina",
+          "Relación albúmina-globulina",
+          "Sodio sérico",
+          "Potasio sérico",
+          "Fósforo sérico",
+          "Biometría hemática (BH)",
+          "Grupo sanguíneo y factor Rh",
+          "Examen general de orina (EGO)",
+          "Coproparasitoscópico (1 muestra)"
+        ]
+      },
+      {
+        "nombre": "Check-up Pediátrico",
+        "precio": 1000.0,
+        "definicion": "Perfil de salud preventiva diseñado para la primera infancia que permite evaluar el desarrollo sanguíneo, detectar infecciones gastrointestinales o respiratorias comunes y conocer la tipificación sanguínea del niño.",
+        "tipo_muestra": "Sangre total/EDTA, Suero, muestra de heces y primera orina del día.",
+        "tiempo_entrega": "Mismo día",
+        "indicaciones": "Ayuno de 12 horas, primer orina de la mañana",
+        "analitos_incluidos": [
+          "Glucosa sérica",
+          "Urea sérica",
+          "Nitrógeno ureico sérico (BUN)",
+          "Creatinina sérica",
+          "Ácido úrico sérico",
+          "Colesterol total",
+          "Triglicéridos",
+          "Biometría hemática (BH)",
+          "Grupo sanguíneo y factor Rh",
+          "Examen general de orina (EGO)",
+          "Coproparasitoscópico (1 muestra)",
+          "Cultivo de exudado faríngeo"
+        ]
+      },
+      {
         "nombre": "Hombre adulto mayor",
         "precio": 5600.0,
         "definicion": "Panel de salud avanzada para la tercera edad enfocado en el monitoreo preventivo profundo de la salud prostática, función metabólica e insulínica, perfil hormonal, riesgo cardiovascular, función hepático-renal y detección de marcadores tumorales o déficits nutricionales.",
@@ -56815,6 +57124,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -56835,6 +57145,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)",
@@ -56929,6 +57240,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -56981,6 +57293,7 @@
           "Magnesio sérico",
           "Hierro sérico",
           "Ferritina",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -57040,6 +57353,7 @@
           "Inmunoglobulina IgA",
           "Inmunoglobulina IgM",
           "Inmunoglobulina IgG",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)"
         ]
       },
@@ -57071,6 +57385,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -57091,6 +57406,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)",
@@ -57923,6 +58239,7 @@
           "Sodio sérico",
           "Potasio sérico",
           "Fósforo sérico",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)"
@@ -57943,6 +58260,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)",
@@ -58691,6 +59009,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -58758,6 +59077,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -58825,6 +59145,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -58892,6 +59213,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -58959,6 +59281,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -59008,6 +59331,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -59057,6 +59381,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Examen general de orina (EGO)",
           "Anticuerpos Hepatitis A IgG / IgM",
           "Antígeno de Superficie de la Hepatitis B (HBsAg)",
@@ -59539,6 +59864,7 @@
           "Ácido úrico sérico",
           "Colesterol total",
           "Triglicéridos",
+          "Biometría hemática (BH)",
           "Grupo sanguíneo y factor Rh",
           "Examen general de orina (EGO)",
           "Coproparasitoscópico (1 muestra)",
