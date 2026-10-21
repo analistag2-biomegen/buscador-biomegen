@@ -699,21 +699,27 @@ def mostrar_modal_detalles(estudio):
     st.info(estudio.get("definicion", "Sin definición disponible para este estudio."))
 
     st.markdown("🔬 **Lo que se analiza en este estudio:**")
-    analitos = estudio.get("analitos_incluidos", estudio.get("analitos", []))
-
-    if not analitos:
+    
+    # 1. Obtener analitos tal cual están guardados
+    analitos_raw = estudio.get("analitos_incluidos", estudio.get("analitos", []))
+    
+    # 2. Si viene vacía la lista, rastrear en la base global
+    if not analitos_raw:
+        nom_norm = normalizar(nombre)
         analitos_hallados = []
         for item_d in datos:
-            for pkg_d in item_d.get("paquetes", []):
-                if pkg_d.get("nombre") == nombre:
-                    a_nom = item_d.get("analito")
-                    if a_nom and a_nom not in analitos_hallados:
-                        analitos_hallados.append(a_nom)
-        if analitos_hallados:
-            analitos = analitos_hallados
+            a_nom = item_d.get("analito")
+            if a_nom:
+                for pkg_d in item_d.get("paquetes", []):
+                    pkg_nom_norm = normalizar(pkg_d.get("nombre", ""))
+                    if nom_norm in pkg_nom_norm or pkg_nom_norm in nom_norm:
+                        if a_nom not in analitos_hallados:
+                            analitos_hallados.append(a_nom)
+        analitos_raw = analitos_hallados
 
-    if analitos:
-        for a in analitos:
+    # 3. Mostrar TODOS los analitos y etiquetas (incluyendo QS6, QS12, etc.) sin omitir ninguna
+    if analitos_raw:
+        for a in analitos_raw:
             st.markdown(f"• {a}")
     else:
         st.markdown(f"• {nombre}")
@@ -724,7 +730,6 @@ def mostrar_modal_detalles(estudio):
     if st.button("➕ Agregar este estudio a la cotización", key=f"modal_add_{nombre}", use_container_width=True):
         agregar_al_carrito(estudio)
         st.rerun()
-
 
 @st.cache_data(ttl=1)
 def cargar_datos():
@@ -801,7 +806,7 @@ tab_modo_1, tab_modo_2, tab_modo_3 = st.tabs([
 ])
 
 # -------------------------------------------------------------
-# PESTAÑA 1: BUSCADOR DE ANALITOS Y PAQUETES (INTELIGENTE)
+# PESTAÑA 1: BUSCADOR DE ANALITOS Y PAQUETES (CON EQUIVALENCIAS QS)
 # -------------------------------------------------------------
 with tab_modo_1:
     st.write("Ingresa uno o varios analitos o paquetes **separados por comas** (ej: *Glucosa, QS3, Antidoping*).")
@@ -814,39 +819,58 @@ with tab_modo_1:
 
     if busqueda_input:
         terminos_raw = [t.strip() for t in busqueda_input.split(",") if t.strip()]
-        
-        # 1. IDENTIFICAR SI TODOS LOS TÉRMINOS SON NOMBRES DIRECTOS DE PAQUETES
-        terminos_son_paquetes_directos = True
-        for t_raw in terminos_raw:
-            t_norm = normalizar(t_raw)
-            es_paquete = False
-            for nom_pkg in TODOS_LOS_PAQUETES.keys():
-                nom_norm = normalizar(nom_pkg)
-                if t_norm == nom_norm or t_norm in nom_norm or nom_norm in t_norm:
-                    es_paquete = True
-                    break
-            if not es_paquete:
-                terminos_son_paquetes_directos = False
-                break
+
+        # Mapa de equivalencias para que entienda las abreviaturas de las Químicas
+        MAPA_ALIAS_QS = {
+            "qs3": ["qs3", "quimica sanguinea 3", "quimica sanguinea de 3"],
+            "qs4": ["qs4", "quimica sanguinea 4", "quimica sanguinea de 4"],
+            "qs5": ["qs5", "quimica sanguinea 5", "quimica sanguinea de 5"],
+            "qs6": ["qs6", "quimica sanguinea 6", "quimica sanguinea de 6"],
+            "qs12": ["qs12", "quimica sanguinea 12", "quimica sanguinea de 12"],
+            "qs14": ["qs14", "quimica sanguinea 14", "quimica sanguinea de 14"],
+            "qs19": ["qs19", "quimica sanguinea 19", "quimica sanguinea de 19"],
+            "qs24": ["qs24", "quimica sanguinea 24", "quimica sanguinea de 24"],
+            "qs27": ["qs27", "quimica sanguinea 27", "quimica sanguinea de 27"],
+            "qs28": ["qs28", "quimica sanguinea 28", "quimica sanguinea de 28"],
+            "qs30": ["qs30", "quimica sanguinea 30", "quimica sanguinea de 30"],
+            "qs32": ["qs32", "quimica sanguinea 32", "quimica sanguinea de 32"],
+            "qs36": ["qs36", "quimica sanguinea 36", "quimica sanguinea de 36"],
+            "qs38": ["qs38", "quimica sanguinea 38", "quimica sanguinea de 38"],
+            "qs44": ["qs44", "quimica sanguinea 44", "quimica sanguinea de 44"],
+            "bh": ["bh", "biometria hematica"],
+            "ego": ["ego", "examen general de orina"],
+        }
 
         paquetes_coincidencias = []
 
-        # 2. SOLO BUSCAR PAQUETES INTEGRALES SI SE BUSCARON ANALITOS SUELTOS (NO PAQUETES ENTEROS)
-        if len(terminos_raw) >= 2 and not terminos_son_paquetes_directos:
+        if len(terminos_raw) >= 2:
             for nombre_pkg, pkg_info in TODOS_LOS_PAQUETES.items():
-                texto_paquete = nombre_pkg + " " + " ".join(pkg_info.get("analitos_incluidos", []))
+                # Reunir todo el texto del paquete (Nombre + Analitos incluidos)
+                texto_paquete_norm = normalizar(nombre_pkg + " " + " ".join(pkg_info.get("analitos_incluidos", [])))
 
                 terminos_encontrados = set()
                 for t_raw in terminos_raw:
-                    # Verificar si el término buscado coincide con algún analito del paquete
-                    for item_d in datos:
-                        if coincide_busqueda(t_raw, item_d.get("analito", "")):
-                            for p_asoc in item_d.get("paquetes", []):
-                                if p_asoc.get("nombre") == nombre_pkg:
-                                    terminos_encontrados.add(t_raw)
+                    t_norm = normalizar(t_raw)
+                    
+                    # 1. Verificar si el término directo o sus variantes alias están en el paquete
+                    variantes = MAPA_ALIAS_QS.get(t_norm, [t_norm])
+                    match_hallado = False
+                    
+                    for var in variantes:
+                        if var in texto_paquete_norm or coincide_busqueda(var, texto_paquete_norm):
+                            match_hallado = True
+                            break
 
-                    # Si coincide directamente en el texto normalizado del paquete
-                    if coincide_busqueda(t_raw, texto_paquete):
+                    # 2. Si no matchó directo, verificar en la base de datos de analitos
+                    if not match_hallado:
+                        for item_d in datos:
+                            if coincide_busqueda(t_raw, item_d.get("analito", "")):
+                                for p_asoc in item_d.get("paquetes", []):
+                                    if p_asoc.get("nombre") == nombre_pkg:
+                                        match_hallado = True
+                                        break
+
+                    if match_hallado:
                         terminos_encontrados.add(t_raw)
 
                 if len(terminos_encontrados) >= 1:
@@ -855,13 +879,13 @@ with tab_modo_1:
                         "terminos_encontrados": terminos_encontrados,
                     })
 
+            # Ordenar primero por la cantidad de coincidencias (de mayor a menor) y luego por menor precio
             paquetes_coincidencias.sort(
                 key=lambda x: (-len(x["terminos_encontrados"]), x["datos_paquete"].get("precio", 0.0))
             )
 
         nombres_tabs = []
-        # Solo mostrar la pestaña rosa de Paquetes Integrales si no es una búsqueda exclusiva de nombres de paquetes
-        if paquetes_coincidencias and not terminos_son_paquetes_directos:
+        if paquetes_coincidencias:
             nombres_tabs.append("🌟 Paquetes Integrales")
 
         for t in terminos_raw:
@@ -870,10 +894,10 @@ with tab_modo_1:
         tabs_creadas = st.tabs(nombres_tabs)
         tab_index = 0
 
-        # RENDERIZAR PESTAÑA 🌟 PAQUETES INTEGRALES (SI APLICA)
-        if paquetes_coincidencias and not terminos_son_paquetes_directos:
+        # RENDERIZAR PESTAÑA 🌟 PAQUETES INTEGRALES
+        if paquetes_coincidencias:
             with tabs_creadas[tab_index]:
-                st.success("🌟 **Paquetes integrales sugeridos que contienen los analitos buscados:**")
+                st.success("🌟 **Paquetes integrales sugeridos que contienen los analitos o QS buscados:**")
 
                 top_cross = paquetes_coincidencias[:3]
                 resto_cross = paquetes_coincidencias[3:]
@@ -908,7 +932,7 @@ with tab_modo_1:
             with tabs_creadas[tab_index]:
                 t_norm_buscado = normalizar(termino_raw)
                 
-                # 1. BUSCAR SI COINCIDE DIRECCIÓN CON UN PAQUETE
+                # 1. BÚSQUEDA DIRECTA COMO PAQUETE
                 paquetes_directos_exactos = []
                 for nom_pkg, pkg_obj in TODOS_LOS_PAQUETES.items():
                     nom_pkg_norm = normalizar(nom_pkg)
@@ -935,7 +959,7 @@ with tab_modo_1:
                                 renderizar_tarjeta_paquete(pkg, f"resto_dir_{termino_raw}", idx, es_expandido=False)
 
                 else:
-                    # 2. BÚSQUEDA POR ANALITO (SI NO ES UN NOMBRE DE PAQUETE DIRECTO)
+                    # 2. BÚSQUEDA COMO ANALITO EN LA BASE DE DATOS
                     coincidencias = []
                     nombres_vistos = set()
 
@@ -957,7 +981,7 @@ with tab_modo_1:
                                 if paquetes_asociados:
                                     cat_txt = f" — <i>({res.get('categoria', '')})</i>" if res.get('categoria') else ""
                                     st.markdown(
-                                        f"<h4 class='titulo-azul'>📦 Paquetes con {res['analito']}{cat_txt}</h4>",
+                                        f"<h4 class='titulo-azul'>✨ Paquetes con {res['analito']}{cat_txt}</h4>",
                                         unsafe_allow_html=True,
                                     )
 
@@ -976,7 +1000,7 @@ with tab_modo_1:
                         if lista_singles:
                             if lista_paquetes_analito:
                                 st.markdown("---")
-                            st.markdown("<h3 class='titulo-azul'>⚗️ Estudios Individuales (Singles)</h3>", unsafe_allow_html=True)
+                            st.markdown("<h3 class='titulo-azul'>🏺 Estudios Individuales (Singles)</h3>", unsafe_allow_html=True)
 
                             singles_ordenados = sorted(lista_singles, key=lambda x: float(x.get("precio", 0.0)))
 
@@ -985,8 +1009,8 @@ with tab_modo_1:
                                     col_info, col_add, col_det = st.columns([2.5, 1, 1])
 
                                     with col_info:
-                                        st.markdown(f"💉 **Tipo de muestra:** {res.get('tipo_muestra', 'N/A')}")
-                                        st.markdown(f"📜 **Indicaciones:** {res.get('indicaciones', 'N/A')}")
+                                        st.markdown(f"🧪 **Tipo de muestra:** {res.get('tipo_muestra', 'N/A')}")
+                                        st.markdown(f"📋 **Indicaciones:** {res.get('indicaciones', 'N/A')}")
                                         st.markdown(f"⏳ **Tiempo de entrega:** {res.get('tiempo_entrega', 'N/A')}")
 
                                     with col_add:
