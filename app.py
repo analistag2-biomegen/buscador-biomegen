@@ -37,7 +37,7 @@ def verificar_acceso():
         st.markdown("<h2 style='color: #094A73;'>🔒 Acceso Restringido - BIOMEGEN</h2>", unsafe_allow_html=True)
         st.write("Por favor ingresa la contraseña corporativa para acceder al buscador:")
 
-        # Cadena encriptada en Base64 de "Biomegen2026" (invisible en texto plano)
+        # Cadena encriptada en Base64 (invisible en texto plano)
         CLAVE_ENCRIPTADA = "QmlvbWVnZW4yMDI2"
 
         with st.form("login_form", clear_on_submit=False):
