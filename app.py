@@ -1,12 +1,12 @@
+import base64
 from datetime import datetime
-from difflib import SequenceMatcher
+from functools import lru_cache
 import io
 import json
 import os
 import re
 import unicodedata
 
-from PIL import Image as PILImage
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -201,6 +201,20 @@ STOP_WORDS = {
 }
 
 
+# Equivalencias de las Químicas Sanguíneas (QS3, QS4, ...) y otras abreviaturas.
+# Antes se reconstruía este diccionario en cada búsqueda; ahora se crea una sola vez.
+NUMEROS_QS = [3, 4, 5, 6, 12, 14, 19, 24, 27, 28, 30, 32, 36, 38, 44]
+MAPA_ALIAS_QS = {
+    f"qs{n}": [f"qs{n}", f"quimica sanguinea {n}", f"quimica sanguinea de {n}"]
+    for n in NUMEROS_QS
+}
+MAPA_ALIAS_QS["bh"] = ["bh", "biometria hematica"]
+MAPA_ALIAS_QS["ego"] = ["ego", "examen general de orina"]
+
+
+# Las funciones de normalización se ejecutan miles de veces con los mismos textos
+# (los nombres del catálogo no cambian), así que se guardan sus resultados en memoria.
+@lru_cache(maxsize=None)
 def normalizar(texto):
     if not texto:
         return ""
@@ -211,21 +225,57 @@ def normalizar(texto):
     return re.sub(r"[^\w\s]", " ", texto_limpio).strip()
 
 
+@lru_cache(maxsize=None)
 def normalizar_sin_espacios(texto):
     return normalizar(texto).replace(" ", "")
 
 
+@lru_cache(maxsize=None)
 def obtener_palabras_clave(texto):
     norm = normalizar(texto)
     palabras = norm.split()
-    return [p for p in palabras if p not in STOP_WORDS and len(p) > 1]
+    return tuple(p for p in palabras if p not in STOP_WORDS and len(p) > 1)
 
+def separar_terminos_respetando_parentesis(texto):
+    """Separa por comas pero ignora las comas que estén dentro de paréntesis (...)"""
+    partes = []
+    actual = []
+    nivel_parentesis = 0
+
+    for char in texto:
+        if char == "(":
+            nivel_parentesis += 1
+            actual.append(char)
+        elif char == ")":
+            if nivel_parentesis > 0:
+                nivel_parentesis -= 1
+            actual.append(char)
+        elif char == "," and nivel_parentesis == 0:
+            partes.append("".join(actual).strip())
+            actual = []
+        else:
+            actual.append(char)
+
+    if actual:
+        partes.append("".join(actual).strip())
+
+    return [p for p in partes if p]
+
+@lru_cache(maxsize=None)
+def _tokens_objetivo(texto):
+    return frozenset(obtener_palabras_clave(texto))
 
 def coincide_busqueda(termino_buscado, texto_objetivo):
     t_clean = normalizar_sin_espacios(termino_buscado)
     obj_clean = normalizar_sin_espacios(texto_objetivo)
 
     if not t_clean or not obj_clean:
+        return False
+
+    # Evitar que 'CA 27-29' haga match con 'QS27' o 'Química 27'
+    if "ca27" in t_clean and "qs" in obj_clean:
+        return False
+    if "qs" in t_clean and "ca27" in obj_clean:
         return False
 
     if t_clean in obj_clean or obj_clean in t_clean:
@@ -237,7 +287,7 @@ def coincide_busqueda(termino_buscado, texto_objetivo):
         return True
 
     tokens_buscados = obtener_palabras_clave(t_expandido)
-    tokens_objetivo = set(obtener_palabras_clave(texto_objetivo))
+    tokens_objetivo = _tokens_objetivo(texto_objetivo)
 
     if tokens_buscados:
         coincidencias = sum(
@@ -248,7 +298,6 @@ def coincide_busqueda(termino_buscado, texto_objetivo):
             return True
 
     return False
-
 
 def desduplicar_paquetes(lista_paquetes):
     paquetes_unicos = []
@@ -268,7 +317,212 @@ def obtener_precio_paquete(pkg):
         return pkg.get("precio", 0.0)
     return 0.0
 
-def generar_pdf_binario(nombre_paciente, desc_general_pct, vigencia_texto):
+
+RUTAS_POSIBLES_LOGO = ["LOGO BIOMEGEN SF.png", "LOGO BIOMEGEN.png", "LOGO BIOMEGEN_2.png"]
+
+
+def buscar_logo():
+    for ruta in RUTAS_POSIBLES_LOGO:
+        if os.path.exists(ruta):
+            return ruta
+    return None
+
+
+_SIN_RESULTADO = object()
+
+
+class Catalogo:
+    """Guarda el catálogo ya indexado para no recorrer `datos.json` completo
+    en cada clic. Se construye una sola vez (ver `cargar_catalogo`) y es de solo lectura."""
+
+    def __init__(self, datos):
+        self.datos = datos
+        self.paquetes = {}  # nombre -> paquete (primera aparición)
+        self.singles = {}  # nombre normalizado -> single
+        self._analitos_por_paquete = {}  # nombre paquete -> analitos que lo listan
+        self._cache_precio = {}
+        self._cache_analitos = {}
+        self._cache_match_analito = {}
+
+        for item in datos:
+            tipo_item = item.get("tipo")
+            if tipo_item == "paquete" or "paquetes" in item:
+                for pkg in item.get("paquetes", []):
+                    if isinstance(pkg, dict):
+                        nom_p = pkg.get("nombre")
+                        if nom_p and nom_p not in self.paquetes:
+                            self.paquetes[nom_p] = pkg
+            elif tipo_item in ["single", "individual"]:
+                nom_s = item.get("analito", item.get("nombre"))
+                if nom_s:
+                    self.singles[normalizar(nom_s)] = item
+
+        # Índice inverso: paquete -> analitos (se usa cuando el paquete no trae
+        # su lista `analitos_incluidos`). Antes se buscaba recorriendo todo el catálogo.
+        for item in datos:
+            for pkg in item.get("paquetes", []):
+                self._analitos_por_paquete.setdefault(pkg.get("nombre"), []).append(item.get("analito"))
+
+        # Texto (nombre + analitos) de cada paquete, ya normalizado, para la búsqueda cruzada.
+        self.texto_paquete = {
+            nombre: normalizar(nombre + " " + " ".join(pkg.get("analitos_incluidos", [])))
+            for nombre, pkg in self.paquetes.items()
+        }
+
+    # ---------- Analitos de un paquete ----------
+    def analitos_de_paquete(self, nombre):
+        res = self._cache_analitos.get(nombre)
+        if res is None:
+            propios = self.paquetes[nombre].get("analitos_incluidos", [])
+            res = list(propios) if propios else list(self._analitos_por_paquete.get(nombre, []))
+            self._cache_analitos[nombre] = res
+        return res
+
+    # ---------- Precio de un estudio faltante ----------
+    def buscar_precio_estudio_o_single(self, nombre_analito):
+        res = self._cache_precio.get(nombre_analito, _SIN_RESULTADO)
+        if res is _SIN_RESULTADO:
+            res = self._buscar_precio(nombre_analito)
+            self._cache_precio[nombre_analito] = res
+        return res
+
+    def _buscar_precio(self, nombre_analito):
+        norm_a = normalizar(nombre_analito)
+        if norm_a in self.singles:
+            return self.singles[norm_a]
+        for item in self.datos:
+            if coincide_busqueda(nombre_analito, item.get("analito", "")):
+                if item.get("tipo") in ["single", "individual"]:
+                    return item
+                elif item.get("paquetes"):
+                    pkgs_ord = sorted(item["paquetes"], key=lambda x: x.get("precio", 0.0))
+                    if pkgs_ord:
+                        return pkgs_ord[0]
+        return None
+
+    # ---------- Pestaña 1: paquetes integrales ----------
+    def _paquetes_de_analitos_que_coinciden(self, termino):
+        """Nombres de paquetes que contienen algún analito que coincide con el término."""
+        res = self._cache_match_analito.get(termino)
+        if res is None:
+            res = set()
+            for item_d in self.datos:
+                # Omitir si es un estudio de tipo Single puro
+                if item_d.get("tipo") in ["single", "individual"]:
+                    continue
+                if coincide_busqueda(termino, item_d.get("analito", "")):
+                    for p_asoc in item_d.get("paquetes", []):
+                        nom_p = p_asoc.get("nombre", "")
+                        if nom_p and normalizar(nom_p) not in ["single", "individual"]:
+                            res.add(nom_p)
+            self._cache_match_analito[termino] = res
+        return res
+
+    def paquetes_integrales(self, terminos_raw):
+        # Si la lista de términos viene de un string directo, usar el separador inteligente
+        if isinstance(terminos_raw, str):
+            terminos_raw = separar_terminos_respetando_parentesis(terminos_raw)
+
+        if len(terminos_raw) < 2:
+            return []
+
+        por_analito = {t: self._paquetes_de_analitos_que_coinciden(t) for t in terminos_raw}
+        variantes_por_termino = {
+            t: MAPA_ALIAS_QS.get(normalizar(t), [normalizar(t)]) for t in terminos_raw
+        }
+
+        coincidencias = []
+        for nombre_pkg, pkg_info in self.paquetes.items():
+            texto = self.texto_paquete[nombre_pkg]
+            encontrados = {}
+            for t_raw in terminos_raw:
+                hallado = any(
+                    var in texto or coincide_busqueda(var, texto)
+                    for var in variantes_por_termino[t_raw]
+                )
+                if not hallado and nombre_pkg in por_analito[t_raw]:
+                    hallado = True
+                if hallado:
+                    encontrados[t_raw] = None
+
+            if encontrados:
+                coincidencias.append({"datos_paquete": pkg_info, "terminos_encontrados": encontrados})
+
+        coincidencias.sort(
+            key=lambda x: (-len(x["terminos_encontrados"]), x["datos_paquete"].get("precio", 0.0))
+        )
+        return coincidencias
+
+    # ---------- Pestaña 2: paquete máster ----------
+    def candidatos_master(self, paquetes_seleccionados):
+        analitos_totales_map = {}
+        suma_precios = 0.0
+
+        for p_nom in paquetes_seleccionados:
+            suma_precios += self.paquetes[p_nom].get("precio", 0.0)
+            for a in self.analitos_de_paquete(p_nom):
+                if a:
+                    clave = normalizar(a)
+                    if clave and clave not in analitos_totales_map:
+                        analitos_totales_map[clave] = a
+
+        analitos_totales_keys = set(analitos_totales_map.keys())
+
+        if not analitos_totales_keys:
+            for p_nom in paquetes_seleccionados:
+                analitos_totales_map[normalizar(p_nom)] = p_nom
+            analitos_totales_keys = set(analitos_totales_map.keys())
+
+        candidatos = []
+        for p_nom, p_data in self.paquetes.items():
+            if p_nom in paquetes_seleccionados:
+                continue
+
+            claves_cand = {normalizar(a) for a in self.analitos_de_paquete(p_nom) if a}
+            if not claves_cand:
+                continue
+
+            cubiertos = analitos_totales_keys & claves_cand
+            faltantes = analitos_totales_keys - claves_cand
+            pct = (len(cubiertos) / len(analitos_totales_keys)) * 100.0
+
+            if pct >= 35.0:
+                faltantes_nombres = [analitos_totales_map[k] for k in faltantes if k in analitos_totales_map]
+
+                costo_faltantes = 0.0
+                detalle = []
+                for f_nom in faltantes_nombres:
+                    item_f = self.buscar_precio_estudio_o_single(f_nom)
+                    if item_f:
+                        p_f = item_f.get("precio", 0.0)
+                        if p_f == 0.0 and item_f.get("paquetes"):
+                            p_f = item_f["paquetes"][0].get("precio", 0.0)
+                        costo_faltantes += p_f
+                        detalle.append((f_nom, item_f, p_f))
+                    else:
+                        detalle.append((f_nom, None, 0.0))
+
+                candidatos.append({
+                    "paquete": p_data,
+                    "pct": pct,
+                    "cubiertos_count": len(cubiertos),
+                    "total_requerido": len(analitos_totales_keys),
+                    "faltantes_count": len(faltantes),
+                    "faltantes_nombres": sorted(faltantes_nombres),
+                    "items_faltantes_detalle": detalle,
+                    "costo_faltantes": costo_faltantes,
+                    "costo_combo_total": p_data.get("precio", 0.0) + costo_faltantes,
+                })
+
+        candidatos.sort(key=lambda x: (-x["pct"], x["costo_combo_total"]))
+        return {
+            "total_analitos": len(analitos_totales_keys),
+            "suma_precios": suma_precios,
+            "candidatos": candidatos,
+        }
+
+
+def generar_pdf_binario(carrito, nombre_paciente, desc_general_pct, vigencia_texto, fecha_txt):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -337,17 +591,11 @@ def generar_pdf_binario(nombre_paciente, desc_general_pct, vigencia_texto):
     )
 
     story = []
-    ahora = datetime.now().strftime("%d/%m/%Y")
+    ahora = fecha_txt
 
-    rutas_posibles_logo = ["LOGO BIOMEGEN SF.png", "LOGO BIOMEGEN.png", "LOGO BIOMEGEN_2.png"]
-    ruta_logo_final = None
-    for r in rutas_posibles_logo:
-        if os.path.exists(r):
-            ruta_logo_final = r
-            break
+    ruta_logo_final = buscar_logo()
 
     if ruta_logo_final:
-        p_logo = PILImage.open(ruta_logo_final)
         p_logo = ReportlabImage(ruta_logo_final, width=180, height=45)
     else:
         p_logo = Paragraph("<b>BIOMEGEN</b><br/><font size=8 color='#094A73'>LAB GENÓMICO</font>", style_cell_bold)
@@ -372,7 +620,7 @@ def generar_pdf_binario(nombre_paciente, desc_general_pct, vigencia_texto):
 
     indicaciones_paciente = []
 
-    for nombre, item in st.session_state.carrito.items():
+    for nombre, item in carrito.items():
         precio_u = item["datos"].get("precio", 0.0)
         cant = item["cantidad"]
         pct_d = item.get("descuento_pct", 0)
@@ -529,22 +777,27 @@ def vaciar_carrito():
     st.toast("🧹 Cotización vaciada con éxito", icon="✨")
 
 
+@st.cache_data
+def logo_en_base64(ruta):
+    with open(ruta, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode()
+
+
+@st.cache_data(show_spinner=False)
+def generar_pdf_en_cache(carrito, nombre_paciente, desc_general_pct, vigencia_texto, fecha_txt):
+    """El PDF solo se vuelve a generar si cambia algo de la cotización
+    (antes se regeneraba en cada clic de la página)."""
+    return generar_pdf_binario(carrito, nombre_paciente, desc_general_pct, vigencia_texto, fecha_txt)
+
+
 # -------------------------------------------------------------
 # SIDEBAR
 # -------------------------------------------------------------
 with st.sidebar:
-    rutas_posibles_logo = ["LOGO BIOMEGEN SF.png", "LOGO BIOMEGEN.png", "LOGO BIOMEGEN_2.png"]
-    ruta_logo_final = None
-    for r in rutas_posibles_logo:
-        if os.path.exists(r):
-            ruta_logo_final = r
-            break
+    ruta_logo_final = buscar_logo()
 
     if ruta_logo_final:
-        import base64
-
-        with open(ruta_logo_final, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode()
+        encoded_string = logo_en_base64(ruta_logo_final)
 
         st.markdown(
             f"""
@@ -657,10 +910,12 @@ with st.sidebar:
 
         st.markdown(f"### 💵 Total: **${total_final_cotizacion:,.2f} MXN**")
 
-        pdf_bytes = generar_pdf_binario(
+        pdf_bytes = generar_pdf_en_cache(
+            st.session_state.carrito,
             nombre_paciente_input,
             st.session_state.descuento_general_pct,
             vigencia_input,
+            datetime.now().strftime("%d/%m/%Y"),
         )
         st.download_button(
             label="📄 Descargar Presupuesto PDF",
@@ -731,44 +986,17 @@ def mostrar_modal_detalles(estudio):
         agregar_al_carrito(estudio)
         st.rerun()
 
-@st.cache_data(ttl=1)
-def cargar_datos():
+@st.cache_resource
+def cargar_catalogo(fecha_modificacion):
+    """Lee e indexa datos.json una sola vez. Si cambias el archivo (nueva fecha de
+    modificación) se vuelve a cargar solo; antes se releía cada segundo (ttl=1)."""
     with open("datos.json", "r", encoding="utf-8") as f:
-        return json.load(f)
+        return Catalogo(json.load(f))
 
 
-datos = cargar_datos()
-
-TODOS_LOS_PAQUETES = {}
-DICCIONARIO_SINGLES = {}
-
-for item in datos:
-    tipo_item = item.get("tipo")
-    if tipo_item == "paquete" or "paquetes" in item:
-        for pkg in item.get("paquetes", []):
-            if isinstance(pkg, dict):
-                nom_p = pkg.get("nombre")
-                if nom_p and nom_p not in TODOS_LOS_PAQUETES:
-                    TODOS_LOS_PAQUETES[nom_p] = pkg
-    elif tipo_item in ["single", "individual"]:
-        nom_s = item.get("analito", item.get("nombre"))
-        if nom_s:
-            DICCIONARIO_SINGLES[normalizar(nom_s)] = item
-
-
-def buscar_precio_estudio_o_single(nombre_analito):
-    norm_a = normalizar(nombre_analito)
-    if norm_a in DICCIONARIO_SINGLES:
-        return DICCIONARIO_SINGLES[norm_a]
-    for item in datos:
-        if coincide_busqueda(nombre_analito, item.get("analito", "")):
-            if item.get("tipo") in ["single", "individual"]:
-                return item
-            elif item.get("paquetes"):
-                pkgs_ord = sorted(item["paquetes"], key=lambda x: x.get("precio", 0.0))
-                if pkgs_ord:
-                    return pkgs_ord[0]
-    return None
+CATALOGO = cargar_catalogo(os.path.getmtime("datos.json"))
+datos = CATALOGO.datos
+TODOS_LOS_PAQUETES = CATALOGO.paquetes
 
 
 def renderizar_tarjeta_paquete(pkg, key_prefix, idx, es_expandido=False):
@@ -818,71 +1046,9 @@ with tab_modo_1:
     )
 
     if busqueda_input:
-        terminos_raw = [t.strip() for t in busqueda_input.split(",") if t.strip()]
+        terminos_raw = separar_terminos_respetando_parentesis(busqueda_input)
 
-        # Mapa de equivalencias para que entienda las abreviaturas de las Químicas
-        MAPA_ALIAS_QS = {
-            "qs3": ["qs3", "quimica sanguinea 3", "quimica sanguinea de 3"],
-            "qs4": ["qs4", "quimica sanguinea 4", "quimica sanguinea de 4"],
-            "qs5": ["qs5", "quimica sanguinea 5", "quimica sanguinea de 5"],
-            "qs6": ["qs6", "quimica sanguinea 6", "quimica sanguinea de 6"],
-            "qs12": ["qs12", "quimica sanguinea 12", "quimica sanguinea de 12"],
-            "qs14": ["qs14", "quimica sanguinea 14", "quimica sanguinea de 14"],
-            "qs19": ["qs19", "quimica sanguinea 19", "quimica sanguinea de 19"],
-            "qs24": ["qs24", "quimica sanguinea 24", "quimica sanguinea de 24"],
-            "qs27": ["qs27", "quimica sanguinea 27", "quimica sanguinea de 27"],
-            "qs28": ["qs28", "quimica sanguinea 28", "quimica sanguinea de 28"],
-            "qs30": ["qs30", "quimica sanguinea 30", "quimica sanguinea de 30"],
-            "qs32": ["qs32", "quimica sanguinea 32", "quimica sanguinea de 32"],
-            "qs36": ["qs36", "quimica sanguinea 36", "quimica sanguinea de 36"],
-            "qs38": ["qs38", "quimica sanguinea 38", "quimica sanguinea de 38"],
-            "qs44": ["qs44", "quimica sanguinea 44", "quimica sanguinea de 44"],
-            "bh": ["bh", "biometria hematica"],
-            "ego": ["ego", "examen general de orina"],
-        }
-
-        paquetes_coincidencias = []
-
-        if len(terminos_raw) >= 2:
-            for nombre_pkg, pkg_info in TODOS_LOS_PAQUETES.items():
-                # Reunir todo el texto del paquete (Nombre + Analitos incluidos)
-                texto_paquete_norm = normalizar(nombre_pkg + " " + " ".join(pkg_info.get("analitos_incluidos", [])))
-
-                terminos_encontrados = set()
-                for t_raw in terminos_raw:
-                    t_norm = normalizar(t_raw)
-                    
-                    # 1. Verificar si el término directo o sus variantes alias están en el paquete
-                    variantes = MAPA_ALIAS_QS.get(t_norm, [t_norm])
-                    match_hallado = False
-                    
-                    for var in variantes:
-                        if var in texto_paquete_norm or coincide_busqueda(var, texto_paquete_norm):
-                            match_hallado = True
-                            break
-
-                    # 2. Si no matchó directo, verificar en la base de datos de analitos
-                    if not match_hallado:
-                        for item_d in datos:
-                            if coincide_busqueda(t_raw, item_d.get("analito", "")):
-                                for p_asoc in item_d.get("paquetes", []):
-                                    if p_asoc.get("nombre") == nombre_pkg:
-                                        match_hallado = True
-                                        break
-
-                    if match_hallado:
-                        terminos_encontrados.add(t_raw)
-
-                if len(terminos_encontrados) >= 1:
-                    paquetes_coincidencias.append({
-                        "datos_paquete": pkg_info,
-                        "terminos_encontrados": terminos_encontrados,
-                    })
-
-            # Ordenar primero por la cantidad de coincidencias (de mayor a menor) y luego por menor precio
-            paquetes_coincidencias.sort(
-                key=lambda x: (-len(x["terminos_encontrados"]), x["datos_paquete"].get("precio", 0.0))
-            )
+        paquetes_coincidencias = CATALOGO.paquetes_integrales(terminos_raw)
 
         nombres_tabs = []
         if paquetes_coincidencias:
@@ -932,7 +1098,7 @@ with tab_modo_1:
             with tabs_creadas[tab_index]:
                 t_norm_buscado = normalizar(termino_raw)
                 
-                # 1. BÚSQUEDA DIRECTA COMO PAQUETE
+                # 1. BÚSQUEDA DIRECTA COMO PAQUETE (EJ: PERFIL HEPÁTICO, CHECK-UP, QS28)
                 paquetes_directos_exactos = []
                 for nom_pkg, pkg_obj in TODOS_LOS_PAQUETES.items():
                     nom_pkg_norm = normalizar(nom_pkg)
@@ -959,22 +1125,57 @@ with tab_modo_1:
                                 renderizar_tarjeta_paquete(pkg, f"resto_dir_{termino_raw}", idx, es_expandido=False)
 
                 else:
-                    # 2. BÚSQUEDA COMO ANALITO EN LA BASE DE DATOS
+                    # 2. BÚSQUEDA EXCLUSIVA DEL ANALITO/ESTUDIO INGRESADO (CON FILTRADO DE RELEVANCIA)
                     coincidencias = []
                     nombres_vistos = set()
 
+                    # Palabras genéricas y prefijos que no definen la prueba específica por sí solos
+                    words_ignoradas = {
+                        "cultivo", "cultivos", "exudado", "exudados", "antigeno", "antigenos", 
+                        "anticuerpo", "anticuerpos", "serica", "serico", "suero", "ca", "y", "de", "del", "la", "el"
+                    }
+                    words_clave_buscadas = [w for w in t_norm_buscado.split() if w not in words_ignoradas and len(w) > 1]
+
                     for item in datos:
-                        texto_busqueda = item.get("analito", "") + " " + item.get("categoria", "")
-                        if coincide_busqueda(termino_raw, texto_busqueda):
-                            clave_u = item.get("analito", "")
+                        nom_item = item.get("analito", "")
+                        nom_item_norm = normalizar(nom_item)
+
+                        match_estricto = False
+                        prioridad = 1
+                        
+                        # 1. Match si la frase completa o el número/sigla exacta coincide
+                        if t_norm_buscado in nom_item_norm or nom_item_norm in t_norm_buscado:
+                            match_estricto = True
+                            prioridad = 100  # Máxima prioridad
+                        elif words_clave_buscadas and all(w in nom_item_norm.split() for w in words_clave_buscadas):
+                            match_estricto = True
+                            prioridad = len(words_clave_buscadas)
+
+                        if match_estricto:
+                            clave_u = nom_item
                             if clave_u and clave_u not in nombres_vistos:
                                 nombres_vistos.add(clave_u)
-                                coincidencias.append(item)
+                                coincidencias.append((item, prioridad))
 
                     if coincidencias:
-                        lista_singles = [res for res in coincidencias if res.get("tipo") in ["single", "individual"]]
-                        lista_paquetes_analito = [res for res in coincidencias if res.get("tipo") not in ["single", "individual"] and res.get("paquetes")]
+                        # Ordenar por relevancia para que el estudio exacto quede arriba
+                        coincidencias_ordenadas = [c[0] for c in sorted(coincidencias, key=lambda x: -x[1])]
 
+                        lista_singles = [res for res in coincidencias_ordenadas if res.get("tipo") in ["single", "individual"]]
+                        
+                        lista_paquetes_analito = []
+                        for res in coincidencias_ordenadas:
+                            if res.get("tipo") not in ["single", "individual"] and res.get("paquetes"):
+                                pkgs_reales = [
+                                    p for p in res.get("paquetes", [])
+                                    if p.get("nombre") and normalizar(p.get("nombre")) not in ["single", "individual"]
+                                ]
+                                if pkgs_reales:
+                                    res_copy = dict(res)
+                                    res_copy["paquetes"] = pkgs_reales
+                                    lista_paquetes_analito.append(res_copy)
+
+                        # A) Mostrar Paquetes Reales solo si el analito pertenece a alguno
                         if lista_paquetes_analito:
                             for res in lista_paquetes_analito:
                                 paquetes_asociados = desduplicar_paquetes(res.get("paquetes", []))
@@ -997,36 +1198,65 @@ with tab_modo_1:
                                             for idx, pkg in enumerate(resto_pkg):
                                                 renderizar_tarjeta_paquete(pkg, f"resto_ind_{res['analito']}_{termino_raw}", idx, es_expandido=False)
 
-                        if lista_singles:
+                        # B) Mostrar Estudio Individual (Single) con Leyenda Informativa
+                        if lista_singles or not lista_paquetes_analito:
                             if lista_paquetes_analito:
                                 st.markdown("---")
-                            st.markdown("<h3 class='titulo-azul'>🏺 Estudios Individuales (Singles)</h3>", unsafe_allow_html=True)
+                                st.markdown("<h3 class='titulo-azul'>🏺 Estudios Individuales (Singles)</h3>", unsafe_allow_html=True)
 
-                            singles_ordenados = sorted(lista_singles, key=lambda x: float(x.get("precio", 0.0)))
+                                top_singles_p1 = coincidencias_ordenadas[:3]
+                                resto_singles_p1 = coincidencias_ordenadas[3:]
 
-                            for res in singles_ordenados:
-                                with st.expander(f"📦 **{res['analito']}** — 💰 **${res['precio']:,.2f} MXN**", expanded=False):
-                                    col_info, col_add, col_det = st.columns([2.5, 1, 1])
+                                for res in top_singles_p1:
+                                    nom_s = res.get("analito", res.get("nombre", "Estudio Individual"))
+                                    with st.expander(f"📦 **{nom_s}** — 💰 **${res.get('precio', 0.0):,.2f} MXN**", expanded=True):
+                                        col_info, col_add, col_det = st.columns([2.5, 1, 1])
 
-                                    with col_info:
-                                        st.markdown(f"🧪 **Tipo de muestra:** {res.get('tipo_muestra', 'N/A')}")
-                                        st.markdown(f"📋 **Indicaciones:** {res.get('indicaciones', 'N/A')}")
-                                        st.markdown(f"⏳ **Tiempo de entrega:** {res.get('tiempo_entrega', 'N/A')}")
+                                        with col_info:
+                                            st.markdown(f"💉 **Tipo de muestra:** {res.get('tipo_muestra', 'N/A')}")
+                                            st.markdown(f"📜 **Indicaciones:** {res.get('indicaciones', 'N/A')}")
+                                            st.markdown(f"⏳ **Tiempo de entrega:** {res.get('tiempo_entrega', 'N/A')}")
 
-                                    with col_add:
-                                        if st.button("➕ Agregar", key=f"btn_add_single_{res['analito']}_{termino_raw}", use_container_width=True):
-                                            agregar_al_carrito(res)
-                                            st.rerun()
+                                        with col_add:
+                                            if st.button("➕ Agregar", key=f"btn_add_single_{nom_s}_{termino_raw}", use_container_width=True):
+                                                agregar_al_carrito(res)
+                                                st.rerun()
 
-                                    with col_det:
-                                        if st.button("🫆 Detalles", key=f"btn_det_single_{res['analito']}_{termino_raw}", use_container_width=True):
-                                            mostrar_modal_detalles(res)
+                                        with col_det:
+                                            if st.button("🫆 Detalles", key=f"btn_det_single_{nom_s}_{termino_raw}", use_container_width=True):
+                                                mostrar_modal_detalles(res)
 
+                                if resto_singles_p1:
+                                    with st.expander(f"✨ **Ver {len(resto_singles_p1)} estudios individuales más...**"):
+                                        for res in resto_singles_p1:
+                                            nom_s = res.get("analito", res.get("nombre", "Estudio Individual"))
+                                            st.markdown(f"**{nom_s}** — 💰 **${res.get('precio', 0.0):,.2f} MXN**")
+                                            col_info, col_add, col_det = st.columns([2.5, 1, 1])
+
+                                            with col_info:
+                                                st.markdown(f"💉 **Tipo de muestra:** {res.get('tipo_muestra', 'N/A')}")
+                                                st.markdown(f"📜 **Indicaciones:** {res.get('indicaciones', 'N/A')}")
+                                                st.markdown(f"⏳ **Tiempo de entrega:** {res.get('tiempo_entrega', 'N/A')}")
+
+                                            with col_add:
+                                                if st.button("➕ Agregar", key=f"btn_add_single_resto_{nom_s}_{termino_raw}", use_container_width=True):
+                                                    agregar_al_carrito(res)
+                                                    st.rerun()
+
+                                            with col_det:
+                                                if st.button("🫆 Detalles", key=f"btn_det_single_resto_{nom_s}_{termino_raw}", use_container_width=True):
+                                                    mostrar_modal_detalles(res)
+                                            st.divider()
+                            else:
+                                # MOSTRAR ÚNICAMENTE LA NOTA SI NO HAY PAQUETES
+                                st.info(
+                                    f"💡 **Nota:** *\"{termino_raw.title()}\"* es una prueba individual (Single) que no forma parte de ningún paquete. "
+                                    f"Puedes consultarla y cotizarla directamente en la pestaña **⚗️ Buscador de Pruebas Individuales / Singles**."
+                                )
                     else:
                         st.error(f"❌ No se encontraron coincidencias para: \"{termino_raw}\"")
 
             tab_index += 1
-
 # -------------------------------------------------------------
 # PESTAÑA 2: BUSCADOR DE PAQUETE MÁSTER (TEXTO Y PRECIO CORREGIDOS)
 # -------------------------------------------------------------
@@ -1045,97 +1275,14 @@ with tab_modo_2:
     )
 
     if len(paquetes_seleccionados) >= 2:
-        analitos_totales_map = {}
-        suma_precios_individuales = 0.0
-        objetos_seleccionados = []
-
-        for p_nom in paquetes_seleccionados:
-            p_data = TODOS_LOS_PAQUETES[p_nom]
-            objetos_seleccionados.append(p_data)
-            suma_precios_individuales += p_data.get("precio", 0.0)
-            analitos_p = p_data.get("analitos_incluidos", [])
-
-            if not analitos_p:
-                for item_d in datos:
-                    for pkg_d in item_d.get("paquetes", []):
-                        if pkg_d.get("nombre") == p_nom:
-                            analitos_p.append(item_d.get("analito"))
-
-            for a in analitos_p:
-                if a:
-                    clave_norm = normalizar(a)
-                    if clave_norm and clave_norm not in analitos_totales_map:
-                        analitos_totales_map[clave_norm] = a
-
-        analitos_totales_keys = set(analitos_totales_map.keys())
-
-        if not analitos_totales_keys:
-            for p_nom in paquetes_seleccionados:
-                analitos_totales_map[normalizar(p_nom)] = p_nom
-            analitos_totales_keys = set(analitos_totales_map.keys())
+        resultado_master = CATALOGO.candidatos_master(paquetes_seleccionados)
+        suma_precios_individuales = resultado_master["suma_precios"]
+        candidatos_master = resultado_master["candidatos"]
 
         st.info(
-            f"💡 **Resumen de la combinación:** Los {len(paquetes_seleccionados)} paquetes seleccionados reúnen un total de **{len(analitos_totales_keys)} analitos requeridos**. (Suma vendiendo por separado: **${suma_precios_individuales:,.2f} MXN**)."
+            f"💡 **Resumen de la combinación:** Los {len(paquetes_seleccionados)} paquetes seleccionados reúnen un total de **{resultado_master['total_analitos']} analitos requeridos**. (Suma vendiendo por separado: **${suma_precios_individuales:,.2f} MXN**)."
         )
 
-        candidatos_master = []
-
-        for p_nom, p_data in TODOS_LOS_PAQUETES.items():
-            if p_nom in paquetes_seleccionados:
-                continue
-
-            analitos_cand = p_data.get("analitos_incluidos", [])
-            if not analitos_cand:
-                for item_d in datos:
-                    for pkg_d in item_d.get("paquetes", []):
-                        if pkg_d.get("nombre") == p_nom:
-                            analitos_cand.append(item_d.get("analito"))
-
-            analitos_candidate_keys = set([normalizar(a) for a in analitos_cand if a])
-
-            if not analitos_candidate_keys:
-                continue
-
-            cubiertos_keys = analitos_totales_keys.intersection(analitos_candidate_keys)
-            faltantes_keys = analitos_totales_keys - analitos_candidate_keys
-
-            pct_coincidencia = (
-                len(cubiertos_keys) / len(analitos_totales_keys)
-            ) * 100.0
-
-            if pct_coincidencia >= 35.0:
-                faltantes_nombres = [
-                    analitos_totales_map[k]
-                    for k in faltantes_keys
-                    if k in analitos_totales_map
-                ]
-
-                costo_faltantes = 0.0
-                items_faltantes_encontrados = []
-                for f_nom in faltantes_nombres:
-                    item_f = buscar_precio_estudio_o_single(f_nom)
-                    if item_f:
-                        p_f = item_f.get("precio", 0.0)
-                        if p_f == 0.0 and item_f.get("paquetes"):
-                            p_f = item_f["paquetes"][0].get("precio", 0.0)
-                        costo_faltantes += p_f
-                        items_faltantes_encontrados.append((f_nom, item_f, p_f))
-                    else:
-                        items_faltantes_encontrados.append((f_nom, None, 0.0))
-
-                candidatos_master.append({
-                    "paquete": p_data,
-                    "pct": pct_coincidencia,
-                    "cubiertos_count": len(cubiertos_keys),
-                    "total_requerido": len(analitos_totales_keys),
-                    "faltantes_count": len(faltantes_keys),
-                    "faltantes_nombres": sorted(faltantes_nombres),
-                    "items_faltantes_detalle": items_faltantes_encontrados,
-                    "costo_faltantes": costo_faltantes,
-                    "costo_combo_total": p_data.get("precio", 0.0) + costo_faltantes,
-                })
-
-        candidatos_master.sort(key=lambda x: (-x["pct"], x["costo_combo_total"]))
         coincidencias_100 = [c for c in candidatos_master if c["pct"] >= 99.0]
 
         st.markdown("---")
@@ -1263,7 +1410,7 @@ with tab_modo_2:
         st.info("Selecciona al menos **1 paquete más** para calcular las mejores estrategias.")
 
 # -------------------------------------------------------------
-# PESTAÑA 3: BUSCADOR DE PRUEBAS INDIVIDUALES / SINGLES (ORDENADO POR PRECIO)
+# PESTAÑA 3: BUSCADOR DE PRUEBAS INDIVIDUALES / SINGLES (LIMITADO A TOP 3 + EXPANDER)
 # -------------------------------------------------------------
 with tab_modo_3:
     st.markdown("<h3 class='titulo-azul'>🧪 Buscador de Pruebas Individuales (Singles)</h3>", unsafe_allow_html=True)
@@ -1275,23 +1422,55 @@ with tab_modo_3:
         key="input_busqueda_individual",
     )
 
+    WORDS_GENERICAS = {
+        "humana", "humano", "serica", "serico", "suero", "libre", "fraccion",
+        "total", "totales", "prueba", "perfil", "cuantitativa", "cualitativa",
+        "y", "de", "del", "la", "el", "los", "las", "en", "para", "con"
+    }
+
     if busqueda_ind_input:
-        terminos_ind = [t.strip() for t in busqueda_ind_input.split(",") if t.strip()]
+        terminos_ind = separar_terminos_respetando_parentesis(busqueda_ind_input)
 
         for t_ind in terminos_ind:
             hallados_ind = []
+            t_norm_buscado = normalizar(t_ind)
+            
+            words_especificas = [
+                w for w in t_norm_buscado.split() 
+                if w not in WORDS_GENERICAS and len(w) > 1
+            ]
+
             for item in datos:
                 if item.get("tipo") in ["single", "individual"]:
                     nom_test = item.get("analito", item.get("nombre", ""))
-                    if coincide_busqueda(t_ind, nom_test):
-                        hallados_ind.append(item)
+                    nom_test_norm = normalizar(nom_test)
+                    words_estudio = [w for w in nom_test_norm.split() if w not in STOP_WORDS]
+
+                    # 1. Coincidencia exacta o frase contenida
+                    if t_norm_buscado in nom_test_norm or nom_test_norm in t_norm_buscado:
+                        hallados_ind.append((item, 100))  # Máxima prioridad
+                    else:
+                        # 2. Coincidencia por palabras clave
+                        if words_especificas and any(w in words_estudio for w in words_especificas):
+                            coincidencias_cnt = sum(1 for w in words_especificas if w in words_estudio)
+                            hallados_ind.append((item, coincidencias_cnt))
 
             if hallados_ind:
-                # ORDENAR DE MENOR A MAYOR PRECIO
-                hallados_ind_ordenados = sorted(hallados_ind, key=lambda x: float(x.get("precio", 0.0)))
+                # ORDENAR PRIMERO POR RELEVANCIA Y LUEGO POR PRECIO
+                hallados_ind_ordenados = sorted(
+                    hallados_ind, 
+                    key=lambda x: (-x[1], float(x[0].get("precio", 0.0)))
+                )
 
                 st.markdown(f"#### ✨ Resultados para: \"{t_ind.title()}\"")
-                for res_i in hallados_ind_ordenados:
+
+                # SEPARAR EN TOP 3 Y RESTO DE RESULTADOS
+                top_singles = hallados_ind_ordenados[:3]
+                resto_singles = hallados_ind_ordenados[3:]
+
+                # 1. Renderizar los primeros 3 resultados
+                for idx, res_tuple in enumerate(top_singles):
+                    res_i = res_tuple[0]
                     n_i = res_i.get("analito", res_i.get("nombre", "Prueba"))
                     p_i = res_i.get("precio", 0.0)
 
@@ -1304,12 +1483,39 @@ with tab_modo_3:
                             st.markdown(f"⏳ **Tiempo de entrega:** {res_i.get('tiempo_entrega', 'N/A')}")
 
                         with col_add:
-                            if st.button("➕ Agregar", key=f"btn_add_p3_{n_i}_{t_ind}", use_container_width=True):
+                            if st.button("➕ Agregar", key=f"btn_add_p3_{n_i}_{t_ind}_{idx}", use_container_width=True):
                                 agregar_al_carrito(res_i)
                                 st.rerun()
 
                         with col_det:
-                            if st.button("🫆 Detalles", key=f"btn_det_p3_{n_i}_{t_ind}", use_container_width=True):
+                            if st.button("🫆 Detalles", key=f"btn_det_p3_{n_i}_{t_ind}_{idx}", use_container_width=True):
                                 mostrar_modal_detalles(res_i)
+
+                # 2. Renderizar el resto dentro de un expander si hay más de 3
+                if resto_singles:
+                    with st.expander(f"✨ **Ver {len(resto_singles)} resultados individuales más relacionados...**"):
+                        for idx, res_tuple in enumerate(resto_singles):
+                            res_i = res_tuple[0]
+                            n_i = res_i.get("analito", res_i.get("nombre", "Prueba"))
+                            p_i = res_i.get("precio", 0.0)
+
+                            st.markdown(f"**{n_i}** — 💰 **${p_i:,.2f} MXN**")
+                            col_info, col_add, col_det = st.columns([2.5, 1, 1])
+
+                            with col_info:
+                                st.markdown(f"💉 **Tipo de muestra:** {res_i.get('tipo_muestra', 'N/A')}")
+                                st.markdown(f"📜 **Indicaciones:** {res_i.get('indicaciones', 'N/A')}")
+                                st.markdown(f"⏳ **Tiempo de entrega:** {res_i.get('tiempo_entrega', 'N/A')}")
+
+                            with col_add:
+                                if st.button("➕ Agregar", key=f"btn_add_resto_{n_i}_{t_ind}_{idx}", use_container_width=True):
+                                    agregar_al_carrito(res_i)
+                                    st.rerun()
+
+                            with col_det:
+                                if st.button("🫆 Detalles", key=f"btn_det_resto_{n_i}_{t_ind}_{idx}", use_container_width=True):
+                                    mostrar_modal_detalles(res_i)
+                            st.divider()
+
             else:
                 st.warning(f"⚠️ No se encontró la prueba \"{t_ind}\" en la lista de Pruebas Individuales / Singles.")
