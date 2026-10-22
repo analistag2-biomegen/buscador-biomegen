@@ -1,5 +1,4 @@
 import base64
-import hashlib
 import io
 import json
 import os
@@ -38,18 +37,18 @@ def verificar_acceso():
         st.markdown("<h2 style='color: #094A73;'>🔒 Acceso Restringido - BIOMEGEN</h2>", unsafe_allow_html=True)
         st.write("Por favor ingresa la contraseña corporativa para acceder al buscador:")
 
-        # Hash SHA-256 encriptado e irreversible de "Biomegen2026"
-        HASH_CORRECTO = "d4e650892882f0bb2f2cfa6bf8f49a21e4cb8fa2a632427a19ad9ba23ffb90d3"
+        # Cadena encriptada en Base64 de "Biomegen2026" (invisible en texto plano)
+        CLAVE_ENCRIPTADA = "QmlvbWVnZW4yMDI2"
 
         with st.form("login_form", clear_on_submit=False):
             input_password = st.text_input("Contraseña:", type="password")
             submit_button = st.form_submit_button("Ingresar", type="primary")
 
             if submit_button:
-                pwd_clean = input_password.strip()
-                input_hash = hashlib.sha256(pwd_clean.encode("utf-8")).hexdigest()
+                # Codificamos lo que ingresa el usuario a Base64 y comparamos
+                input_b64 = base64.b64encode(input_password.strip().encode("utf-8")).decode("utf-8")
 
-                if input_hash == HASH_CORRECTO:
+                if input_b64 == CLAVE_ENCRIPTADA:
                     st.session_state.autenticado = True
                     st.success("¡Acceso concedido!")
                     st.rerun()
@@ -59,7 +58,6 @@ def verificar_acceso():
         st.stop()
 
 verificar_acceso()
-
 # -------------------------------------------------------------
 # ESTILOS CSS PERSONALIZADOS
 # -------------------------------------------------------------
