@@ -1,11 +1,13 @@
 import base64
-from datetime import datetime
-from functools import lru_cache
+import hashlib
 import io
 import json
 import os
 import re
 import unicodedata
+from datetime import datetime
+from functools import lru_cache
+from pathlib import Path
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -19,45 +21,43 @@ from reportlab.platypus import (
     TableStyle,
 )
 import streamlit as st
-import bcrypt
-from pathlib import Path
-import hashlib
 
 st.set_page_config(
     page_title="Buscador de Catálogo de Laboratorio", page_icon="🔬", layout="wide"
 )
 
-# -------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # SISTEMA DE SEGURIDAD / CONTRASEÑA
-# -------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-def verificar_contraseña():
-    if "autenticado" not in st.session_state:
-        st.session_state.autenticado = False
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
 
+def verificar_acceso():
     if not st.session_state.autenticado:
         st.markdown("<h2 style='color: #094A73;'>🔒 Acceso Restringido - BIOMEGEN</h2>", unsafe_allow_html=True)
         st.write("Por favor ingresa la contraseña corporativa para acceder al buscador:")
 
-        input_password = st.text_input("Contraseña:", type="password", key="login_pass")
-
-        # Hash SHA-256 encriptado de "Biomegen2026"
         HASH_CORRECTO = "d4e650892882f0bb2f2cfa6bf8f49a21e4cb8fa2a632427a19ad9ba23ffb90d3"
 
-        if st.button("Ingresar", type="primary"):
-            # Encriptamos lo que escribe el usuario y comparamos
-            input_hash = hashlib.sha256(input_password.encode("utf-8")).hexdigest()
-            
-            if input_hash == HASH_CORRECTO:
-                st.session_state.autenticado = True
-                st.success("¡Acceso concedido!")
-                st.rerun()
-            else:
-                st.error("❌ Contraseña incorrecta. Inténtalo de nuevo.")
+        with st.form("login_form", clear_on_submit=False):
+            input_password = st.text_input("Contraseña:", type="password")
+            submit_button = st.form_submit_button("Ingresar", type="primary")
+
+            if submit_button:
+                pwd_clean = input_password.strip()
+                input_hash = hashlib.sha256(pwd_clean.encode("utf-8")).hexdigest()
+
+                if input_hash == HASH_CORRECTO:
+                    st.session_state.autenticado = True
+                    st.success("¡Acceso concedido!")
+                    st.rerun()
+                else:
+                    st.error("❌ Contraseña incorrecta. Inténtalo de nuevo.")
 
         st.stop()
-        
-verificar_contraseña()
+
+verificar_acceso()
 
 # -------------------------------------------------------------
 # ESTILOS CSS PERSONALIZADOS
