@@ -21,6 +21,7 @@ from reportlab.platypus import (
 import streamlit as st
 import bcrypt
 from pathlib import Path
+import hashlib
 
 st.set_page_config(
     page_title="Buscador de Catálogo de Laboratorio", page_icon="🔬", layout="wide"
@@ -30,7 +31,7 @@ st.set_page_config(
 # SISTEMA DE SEGURIDAD / CONTRASEÑA
 # -------------------------------------------------------------
 
-def verificar_contraseña(hashed_secret: str):
+def verificar_contraseña():
     if "autenticado" not in st.session_state:
         st.session_state.autenticado = False
 
@@ -40,11 +41,14 @@ def verificar_contraseña(hashed_secret: str):
 
         input_password = st.text_input("Contraseña:", type="password", key="login_pass")
 
+        # Hash SHA-256 encriptado de "Biomegen2026"
+        HASH_CORRECTO = "d4e650892882f0bb2f2cfa6bf8f49a21e4cb8fa2a632427a19ad9ba23ffb90d3"
+
         if st.button("Ingresar", type="primary"):
-            password_bytes = input_password.encode("utf-8")
-            hashed_bytes = hashed_secret.encode("utf-8")
+            # Encriptamos lo que escribe el usuario y comparamos
+            input_hash = hashlib.sha256(input_password.encode("utf-8")).hexdigest()
             
-            if bcrypt.checkpw(password_bytes, hashed_bytes):
+            if input_hash == HASH_CORRECTO:
                 st.session_state.autenticado = True
                 st.success("¡Acceso concedido!")
                 st.rerun()
@@ -52,9 +56,8 @@ def verificar_contraseña(hashed_secret: str):
                 st.error("❌ Contraseña incorrecta. Inténtalo de nuevo.")
 
         st.stop()
-
-
-verificar_contraseña("$2b$12$0J7QnDrOu06.fVxfhBfme.QDtwvZfo8d.Xei5FY78Tw9hKzJ92oUS")
+        
+verificar_contraseña()
 
 # -------------------------------------------------------------
 # ESTILOS CSS PERSONALIZADOS
