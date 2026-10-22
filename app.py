@@ -19,6 +19,8 @@ from reportlab.platypus import (
     TableStyle,
 )
 import streamlit as st
+import bcrypt
+from pathlib import Path
 
 st.set_page_config(
     page_title="Buscador de Catálogo de Laboratorio", page_icon="🔬", layout="wide"
@@ -27,10 +29,8 @@ st.set_page_config(
 # -------------------------------------------------------------
 # SISTEMA DE SEGURIDAD / CONTRASEÑA
 # -------------------------------------------------------------
-CONTRASEÑA_CORRECTA = "Biomegen_P.Catalogo"
 
-
-def verificar_contraseña():
+def verificar_contraseña(hashed: str):
     if "autenticado" not in st.session_state:
         st.session_state.autenticado = False
 
@@ -46,7 +46,9 @@ def verificar_contraseña():
         )
 
         if st.button("Ingresar", type="primary"):
-            if input_password == CONTRASEÑA_CORRECTA:
+            password_bytes = input_password.encode("utf-8")
+            hashed_bytes = hashed.encode("utf-8")
+            if bcrypt.checkpw(password_bytes, hashed_bytes):
                 st.session_state.autenticado = True
                 st.success("¡Acceso concedido!")
                 st.rerun()
@@ -56,8 +58,7 @@ def verificar_contraseña():
         st.stop()
 
 
-verificar_contraseña()
-
+verificar_contraseña(st.secrets["password_hash"])
 
 # -------------------------------------------------------------
 # ESTILOS CSS PERSONALIZADOS
