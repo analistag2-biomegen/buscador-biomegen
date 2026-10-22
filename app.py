@@ -30,24 +30,20 @@ st.set_page_config(
 # SISTEMA DE SEGURIDAD / CONTRASEÑA
 # -------------------------------------------------------------
 
-def verificar_contraseña(hashed: str):
+def verificar_contraseña(hashed_secret: str):
     if "autenticado" not in st.session_state:
         st.session_state.autenticado = False
 
     if not st.session_state.autenticado:
-        st.markdown(
-            "<h2 style='color: #094A73;'>🔒 Acceso Restringido - BIOMEGEN</h2>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("<h2 style='color: #094A73;'>🔒 Acceso Restringido - BIOMEGEN</h2>", unsafe_allow_html=True)
         st.write("Por favor ingresa la contraseña corporativa para acceder al buscador:")
 
-        input_password = st.text_input(
-            "Contraseña:", type="password", key="login_pass"
-        )
+        input_password = st.text_input("Contraseña:", type="password", key="login_pass")
 
         if st.button("Ingresar", type="primary"):
             password_bytes = input_password.encode("utf-8")
-            hashed_bytes = hashed.encode("utf-8")
+            hashed_bytes = hashed_secret.encode("utf-8")
+            
             if bcrypt.checkpw(password_bytes, hashed_bytes):
                 st.session_state.autenticado = True
                 st.success("¡Acceso concedido!")
