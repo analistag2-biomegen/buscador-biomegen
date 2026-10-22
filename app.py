@@ -54,7 +54,7 @@ def verificar_contraseña(hashed_secret: str):
         st.stop()
 
 
-verificar_contraseña(st.secrets["password_hash"])
+verificar_contraseña("$2b$12$0J7QnDrOu06.fVxfhBfme.QDtwvZfo8d.Xei5FY78Tw9hKzJ92oUS")
 
 # -------------------------------------------------------------
 # ESTILOS CSS PERSONALIZADOS
