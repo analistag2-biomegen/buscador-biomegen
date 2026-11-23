@@ -399,7 +399,7 @@ class Catalogo:
                         return pkgs_ord[0]
         return None
 
-    # ---------- Pestaña 1: paquetes integrales ----------
+# ---------- Pestaña 1: paquetes integrales ----------
     def _paquetes_de_analitos_que_coinciden(self, termino):
         """Nombres de paquetes que contienen algún analito que coincide con el término."""
         res = self._cache_match_analito.get(termino)
@@ -451,6 +451,85 @@ class Catalogo:
             key=lambda x: (-len(x["terminos_encontrados"]), x["datos_paquete"].get("precio", 0.0))
         )
         return coincidencias
+
+    def analizar_estrategia_busqueda(self, terminos_raw, paquetes_coincidencias):
+        if len(terminos_raw) < 2 or not paquetes_coincidencias:
+            return None
+
+        suma_separado = 0.0
+        for t in terminos_raw:
+            t_norm = normalizar(t)
+            t_sin_esp = normalizar_sin_espacios(t)
+            precio_t = 0.0
+
+            pkgs_dir = [
+                p for nom_p, p in self.paquetes.items()
+                if t_norm == normalizar(nom_p)
+                or t_norm in normalizar(nom_p)
+                or normalizar(nom_p) in t_norm
+                or (t_sin_esp and (t_sin_esp in normalizar_sin_espacios(nom_p) or normalizar_sin_espacios(nom_p) in t_sin_esp))
+            ]
+            if pkgs_dir:
+                precio_t = min(p.get("precio", 0.0) for p in pkgs_dir)
+            else:
+                item_f = self.buscar_precio_estudio_o_single(t)
+                if item_f:
+                    precio_t = item_f.get("precio", 0.0)
+                    if precio_t == 0.0 and item_f.get("paquetes"):
+                        precio_t = item_f["paquetes"][0].get("precio", 0.0)
+
+            suma_separado += precio_t
+
+        opciones_evaluadas = []
+        for match in paquetes_coincidencias:
+            pkg = match["datos_paquete"]
+            encontrados = set(match["terminos_encontrados"].keys())
+            faltantes = [t for t in terminos_raw if t not in encontrados]
+
+            costo_faltantes = 0.0
+            items_faltantes = []
+            for f_term in faltantes:
+                f_norm = normalizar(f_term)
+                f_sin_esp = normalizar_sin_espacios(f_term)
+                pkgs_f = [
+                    p for nom_p, p in self.paquetes.items()
+                    if f_norm == normalizar(nom_p)
+                    or f_norm in normalizar(nom_p)
+                    or normalizar(nom_p) in f_norm
+                    or (f_sin_esp and (f_sin_esp in normalizar_sin_espacios(nom_p) or normalizar_sin_espacios(nom_p) in f_sin_esp))
+                ]
+                if pkgs_f:
+                    mejor_p = min(pkgs_f, key=lambda x: x.get("precio", 0.0))
+                    p_f = mejor_p.get("precio", 0.0)
+                    costo_faltantes += p_f
+                    items_faltantes.append((f_term, mejor_p, p_f))
+                else:
+                    item_f = self.buscar_precio_estudio_o_single(f_term)
+                    if item_f:
+                        p_f = item_f.get("precio", 0.0)
+                        if p_f == 0.0 and item_f.get("paquetes"):
+                            p_f = item_f["paquetes"][0].get("precio", 0.0)
+                        costo_faltantes += p_f
+                        items_faltantes.append((f_term, item_f, p_f))
+                    else:
+                        items_faltantes.append((f_term, None, 0.0))
+
+            costo_combo = pkg.get("precio", 0.0) + costo_faltantes
+            opciones_evaluadas.append({
+                "paquete": pkg,
+                "encontrados": list(encontrados),
+                "faltantes": faltantes,
+                "items_faltantes": items_faltantes,
+                "costo_faltantes": costo_faltantes,
+                "costo_combo": costo_combo,
+            })
+
+        opciones_evaluadas.sort(key=lambda x: (-len(x["encontrados"]), x["costo_combo"]))
+
+        return {
+            "suma_separado": suma_separado,
+            "mejor_opcion": opciones_evaluadas[0],
+        }
 
     # ---------- Pestaña 2: paquete máster ----------
     def candidatos_master(self, paquetes_seleccionados):
@@ -521,7 +600,7 @@ class Catalogo:
         }
 
 
-def generar_pdf_binario(carrito, nombre_paciente, desc_general_pct, vigencia_texto, fecha_txt):
+def generar_pdf_binario(carrito, nombre_paciente, desc_gen_tipo, desc_gen_valor, vigencia_texto, fecha_txt):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -538,9 +617,9 @@ def generar_pdf_binario(carrito, nombre_paciente, desc_general_pct, vigencia_tex
     style_header_right = ParagraphStyle(
         "HeaderRight",
         parent=style_normal,
-        fontName="Helvetica-Bold",
-        fontSize=7.5,
-        leading=9.5,
+        fontName="Helvetica",
+        fontSize=6.8,
+        leading=8.5,
         alignment=2,
         textColor=colors.HexColor("#334155"),
     )
@@ -600,10 +679,13 @@ def generar_pdf_binario(carrito, nombre_paciente, desc_general_pct, vigencia_tex
         p_logo = Paragraph("<b>BIOMEGEN</b><br/><font size=8 color='#094A73'>LAB GENÓMICO</font>", style_cell_bold)
 
     p_addr = Paragraph(
-        "HOSPITAL SAN JOSÉ, PROLONGACIÓN CONSTITUYENTES NO. EXT. 302 NO. INT. TORRE 3, PISO 17 COL. EL JACAL,<br/>QUERÉTARO, QUERÉTARO",
+        "<b>QUERÉTARO:</b> Hospital San José, Prolongación Constituyentes No. Ext. 302, Torre 3, Piso 17, Col. El Jacal, Querétaro, Qro.<br/>"
+        "Tel: 442 903 5829 / 442 903 5830 | WhatsApp: 442 553 9123<br/>"
+        "<b>CELAYA:</b> Hospital San José de Celaya, Eje Norte-Poniente Manuel J. Clouthier Ext. 200, Int. 804, Villas de la Hacienda, C.P. 38020, Celaya, Gto.<br/>"
+        "Tel: 461 617 5253 | WhatsApp: 442 825 7499",
         style_header_right,
     )
-    t_header = Table([[p_logo, p_addr]], colWidths=[200, 340])
+    t_header = Table([[p_logo, p_addr]], colWidths=[170, 370])
     t_header.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("BOTTOMPADDING", (0, 0), (-1, -1), 8)]))
     story.append(t_header)
     story.append(Spacer(1, 10))
@@ -622,10 +704,15 @@ def generar_pdf_binario(carrito, nombre_paciente, desc_general_pct, vigencia_tex
     for nombre, item in carrito.items():
         precio_u = item["datos"].get("precio", 0.0)
         cant = item["cantidad"]
-        pct_d = item.get("descuento_pct", 0)
+        d_tipo = item.get("descuento_tipo", "%")
+        d_val = float(item.get("descuento_valor", 0.0))
 
         base_item = precio_u * cant
-        monto_d_item = base_item * (pct_d / 100.0)
+        if d_tipo == "%":
+            monto_d_item = base_item * (d_val / 100.0)
+        else:
+            monto_d_item = min(d_val, base_item)
+
         precio_item_final = base_item - monto_d_item
 
         subtotal_bruto += base_item
@@ -637,12 +724,35 @@ def generar_pdf_binario(carrito, nombre_paciente, desc_general_pct, vigencia_tex
         nombre_fmt = nombre.upper()
         if cant > 1:
             nombre_fmt += f" (x{cant})"
-        if pct_d > 0:
-            nombre_fmt += f" [-{pct_d}% desc.]"
+        if monto_d_item > 0:
+            if d_tipo == "%":
+                nombre_fmt += f" [-{d_val:g}% desc.]"
+            else:
+                nombre_fmt += f" [-${monto_d_item:,.2f} desc.]"
 
-        # Mostrar el precio propio del estudio en la fila (sin aplicar el descuento general)
+        analitos_incluidos = item["datos"].get("analitos_incluidos", item["datos"].get("analitos", []))
+        if not analitos_incluidos and os.path.exists("datos.json"):
+            with open("datos.json", "r", encoding="utf-8") as f_json:
+                cat_temp = Catalogo(json.load(f_json))
+            if nombre in cat_temp.paquetes:
+                analitos_incluidos = cat_temp.analitos_de_paquete(nombre)
+
+        analitos_limpios = [
+            str(a).strip() for a in analitos_incluidos
+            if a and normalizar(a) != normalizar(nombre)
+        ]
+
+        if analitos_limpios:
+            detalle_txt = ", ".join(analitos_limpios)
+            celda_estudio_html = (
+                f"<b>{nombre_fmt}</b><br/>"
+                f"<font size='7' color='#475569'><i>Incluye: {detalle_txt}</i></font>"
+            )
+        else:
+            celda_estudio_html = f"<b>{nombre_fmt}</b>"
+
         table_data.append([
-            Paragraph(nombre_fmt, style_cell),
+            Paragraph(celda_estudio_html, style_cell),
             Paragraph(f"${precio_item_final:,.2f}", style_cell_right),
             Paragraph(tiempo, style_cell),
         ])
@@ -650,7 +760,11 @@ def generar_pdf_binario(carrito, nombre_paciente, desc_general_pct, vigencia_tex
         indicaciones_paciente.append((nombre_fmt, indicacion))
 
     subtotal_despues_items = subtotal_bruto - desc_items_acumulado
-    monto_desc_general = subtotal_despues_items * (desc_general_pct / 100.0)
+    if desc_gen_tipo == "%":
+        monto_desc_general = subtotal_despues_items * (float(desc_gen_valor) / 100.0)
+    else:
+        monto_desc_general = min(float(desc_gen_valor), subtotal_despues_items)
+
     descuento_total_acumulado = desc_items_acumulado + monto_desc_general
     total_final = subtotal_bruto - descuento_total_acumulado
 
@@ -690,7 +804,6 @@ def generar_pdf_binario(carrito, nombre_paciente, desc_general_pct, vigencia_tex
     story.append(t_estudios)
     story.append(Spacer(1, 8))
 
-    # El Descuento General aparece como deducción en el bloque de totales final
     totales_data = [
         [Paragraph("Subtotal:", style_cell_right), Paragraph(f"${subtotal_bruto:,.2f}", style_cell_right)],
     ]
@@ -744,8 +857,11 @@ def generar_pdf_binario(carrito, nombre_paciente, desc_general_pct, vigencia_tex
 if "carrito" not in st.session_state:
     st.session_state.carrito = {}
 
-if "descuento_general_pct" not in st.session_state:
-    st.session_state.descuento_general_pct = 0
+if "descuento_general_tipo" not in st.session_state:
+    st.session_state.descuento_general_tipo = "%"
+
+if "descuento_general_valor" not in st.session_state:
+    st.session_state.descuento_general_valor = 0.0
 
 
 def agregar_al_carrito(paquete):
@@ -757,7 +873,8 @@ def agregar_al_carrito(paquete):
         st.session_state.carrito[nombre] = {
             "datos": paquete,
             "cantidad": 1,
-            "descuento_pct": 0,
+            "descuento_tipo": "%",
+            "descuento_valor": 0.0,
         }
         st.toast(f"✅ ¡{nombre} agregado a la cotización!", icon="🛒")
 
@@ -772,7 +889,8 @@ def modificar_cantidad(nombre, cambio):
 
 def vaciar_carrito():
     st.session_state.carrito = {}
-    st.session_state.descuento_general_pct = 0
+    st.session_state.descuento_general_tipo = "%"
+    st.session_state.descuento_general_valor = 0.0
     st.toast("🧹 Cotización vaciada con éxito", icon="✨")
 
 
@@ -783,10 +901,8 @@ def logo_en_base64(ruta):
 
 
 @st.cache_data(show_spinner=False)
-def generar_pdf_en_cache(carrito, nombre_paciente, desc_general_pct, vigencia_texto, fecha_txt):
-    """El PDF solo se vuelve a generar si cambia algo de la cotización
-    (antes se regeneraba en cada clic de la página)."""
-    return generar_pdf_binario(carrito, nombre_paciente, desc_general_pct, vigencia_texto, fecha_txt)
+def generar_pdf_en_cache(carrito, nombre_paciente, desc_gen_tipo, desc_gen_valor, vigencia_texto, fecha_txt):
+    return generar_pdf_binario(carrito, nombre_paciente, desc_gen_tipo, desc_gen_valor, vigencia_texto, fecha_txt)
 
 
 # -------------------------------------------------------------
@@ -832,10 +948,15 @@ with st.sidebar:
         for nombre, item in list(st.session_state.carrito.items()):
             precio = item["datos"].get("precio", 0.0)
             cantidad = item["cantidad"]
-            desc_pct = item.get("descuento_pct", 0)
+            d_tipo = item.get("descuento_tipo", "%")
+            d_val = float(item.get("descuento_valor", 0.0))
 
             precio_base = precio * cantidad
-            monto_desc_item = precio_base * (desc_pct / 100.0)
+            if d_tipo == "%":
+                monto_desc_item = precio_base * (d_val / 100.0)
+            else:
+                monto_desc_item = min(d_val, precio_base)
+
             subtotal_item = precio_base - monto_desc_item
 
             subtotal_base_acumulado += precio_base
@@ -864,40 +985,92 @@ with st.sidebar:
                     st.toast(f"🗑️ Se eliminó {nombre}", icon="🧹")
                     st.rerun()
 
-            nuevo_desc = st.number_input(
-                "Descuento estudio (%):",
-                min_value=0,
-                max_value=100,
-                value=int(desc_pct),
-                step=5,
-                key=f"desc_{nombre}",
-            )
-            if nuevo_desc != desc_pct:
-                st.session_state.carrito[nombre]["descuento_pct"] = nuevo_desc
+            col_tipo_d, col_val_d = st.columns([1, 2])
+            with col_tipo_d:
+                nuevo_tipo = st.selectbox(
+                    "Tipo:",
+                    options=["%", "$"],
+                    index=0 if d_tipo == "%" else 1,
+                    key=f"tipo_desc_{nombre}",
+                )
+            with col_val_d:
+                if nuevo_tipo == "%":
+                    nuevo_val = st.number_input(
+                        "Descuento (%):",
+                        min_value=0.0,
+                        max_value=100.0,
+                        value=min(d_val, 100.0),
+                        step=5.0,
+                        key=f"val_desc_{nombre}",
+                    )
+                else:
+                    nuevo_val = st.number_input(
+                        "Descuento ($):",
+                        min_value=0.0,
+                        max_value=float(precio_base),
+                        value=min(d_val, float(precio_base)),
+                        step=10.0,
+                        key=f"val_desc_{nombre}",
+                    )
+
+            if nuevo_tipo != d_tipo or nuevo_val != d_val:
+                st.session_state.carrito[nombre]["descuento_tipo"] = nuevo_tipo
+                st.session_state.carrito[nombre]["descuento_valor"] = nuevo_val
                 st.rerun()
 
-            if desc_pct > 0:
-                st.write(f"Subtotal: ~${precio_base:,.2f}~ **${subtotal_item:,.2f} MXN** *(-{desc_pct}%)*")
+            if monto_desc_item > 0:
+                etiqueta_d = f"-{d_val:g}%" if d_tipo == "%" else f"-${monto_desc_item:,.2f}"
+                st.write(f"Subtotal: ~${precio_base:,.2f}~ **${subtotal_item:,.2f} MXN** *({etiqueta_d})*")
             else:
                 st.write(f"Subtotal: **${subtotal_item:,.2f} MXN**")
 
             st.divider()
 
         st.markdown("### 🔖 Descuento General")
-        nuevo_desc_gen = st.number_input(
-            "Descuento al Total (%):",
-            min_value=0,
-            max_value=100,
-            value=int(st.session_state.descuento_general_pct),
-            step=5,
-            key="input_desc_general",
-        )
-        if nuevo_desc_gen != st.session_state.descuento_general_pct:
-            st.session_state.descuento_general_pct = nuevo_desc_gen
-            st.rerun()
+        col_gen_tipo, col_gen_val = st.columns([1, 2])
+        with col_gen_tipo:
+            nuevo_gen_tipo = st.selectbox(
+                "Tipo:",
+                options=["%", "$"],
+                index=0 if st.session_state.descuento_general_tipo == "%" else 1,
+                key="input_desc_gen_tipo",
+            )
 
         subtotal_parcial = subtotal_base_acumulado - monto_desc_items_total
-        monto_desc_general = subtotal_parcial * (st.session_state.descuento_general_pct / 100.0)
+
+        with col_gen_val:
+            if nuevo_gen_tipo == "%":
+                nuevo_gen_val = st.number_input(
+                    "Al Total (%):",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=min(float(st.session_state.descuento_general_valor), 100.0),
+                    step=5.0,
+                    key="input_desc_gen_val",
+                )
+            else:
+                nuevo_gen_val = st.number_input(
+                    "Al Total ($):",
+                    min_value=0.0,
+                    max_value=float(max(subtotal_parcial, 0.0)),
+                    value=min(float(st.session_state.descuento_general_valor), float(max(subtotal_parcial, 0.0))),
+                    step=10.0,
+                    key="input_desc_gen_val",
+                )
+
+        if (
+            nuevo_gen_tipo != st.session_state.descuento_general_tipo
+            or nuevo_gen_val != st.session_state.descuento_general_valor
+        ):
+            st.session_state.descuento_general_tipo = nuevo_gen_tipo
+            st.session_state.descuento_general_valor = nuevo_gen_val
+            st.rerun()
+
+        if st.session_state.descuento_general_tipo == "%":
+            monto_desc_general = subtotal_parcial * (float(st.session_state.descuento_general_valor) / 100.0)
+        else:
+            monto_desc_general = min(float(st.session_state.descuento_general_valor), subtotal_parcial)
+
         total_descuentos = monto_desc_items_total + monto_desc_general
         total_final_cotizacion = subtotal_base_acumulado - total_descuentos
 
@@ -912,7 +1085,8 @@ with st.sidebar:
         pdf_bytes = generar_pdf_en_cache(
             st.session_state.carrito,
             nombre_paciente_input,
-            st.session_state.descuento_general_pct,
+            st.session_state.descuento_general_tipo,
+            st.session_state.descuento_general_valor,
             vigencia_input,
             datetime.now().strftime("%d/%m/%Y"),
         )
@@ -1062,6 +1236,46 @@ with tab_modo_1:
         # RENDERIZAR PESTAÑA 🌟 PAQUETES INTEGRALES
         if paquetes_coincidencias:
             with tabs_creadas[tab_index]:
+                estrategia_p1 = CATALOGO.analizar_estrategia_busqueda(terminos_raw, paquetes_coincidencias)
+
+                if estrategia_p1:
+                    suma_sep = estrategia_p1["suma_separado"]
+                    mejor = estrategia_p1["mejor_opcion"]
+                    pkg_mejor = mejor["paquete"]
+                    costo_base_mejor = pkg_mejor.get("precio", 0.0)
+                    costo_combo_p1 = mejor["costo_combo"]
+                    ahorro_p1 = suma_sep - costo_combo_p1
+
+                    st.info(
+                        f"💡 **Resumen de la búsqueda:** Los {len(terminos_raw)} estudios buscados suman aproximadamente **${suma_sep:,.2f} MXN** cotizándolos por separado."
+                    )
+
+                    st.markdown(
+                        "<h3 class='titulo-azul'>📊 Análisis de Estrategia y Combinaciones Sugeridas</h3>",
+                        unsafe_allow_html=True,
+                    )
+
+                    if mejor["faltantes"]:
+                        faltantes_txt = ", ".join([f.title() for f in mejor["faltantes"]])
+                        texto_falt = f"junto con **{faltantes_txt}** (~${mejor['costo_faltantes']:,.2f} MXN)."
+                    else:
+                        texto_falt = "que cubre el **100% de los estudios buscados** directamente."
+
+                    if ahorro_p1 > 0:
+                        st.success(
+                            f"✨ **ESTRATEGIA MÁS ECONÓMICA RECOMENDADA:**\n\n"
+                            f"Conviene ofrecer el paquete **{pkg_mejor.get('nombre')}** (${costo_base_mejor:,.2f} MXN) {texto_falt}\n\n"
+                            f"🪄 **Total Combo Sugerido:** **${costo_combo_p1:,.2f} MXN** — 💰 **¡El paciente se ahorra ${ahorro_p1:,.2f} MXN!**"
+                        )
+                    else:
+                        st.warning(
+                            f"🏷️ **RECOMENDACIÓN DE PRECIO:**\n\n"
+                            f"El paquete integral más cercano (**{pkg_mejor.get('nombre')}**) tiene un costo total de **${costo_combo_p1:,.2f} MXN**.\n\n"
+                            f"🪄 **Conviene más cotizar los estudios buscados por separado por ~${suma_sep:,.2f} MXN.**"
+                        )
+
+                    st.divider()
+
                 st.success("🌟 **Paquetes integrales sugeridos que contienen los analitos o QS buscados:**")
 
                 top_cross = paquetes_coincidencias[:3]
@@ -1098,10 +1312,17 @@ with tab_modo_1:
                 t_norm_buscado = normalizar(termino_raw)
                 
                 # 1. BÚSQUEDA DIRECTA COMO PAQUETE (EJ: PERFIL HEPÁTICO, CHECK-UP, QS28)
+                t_sin_espacios = normalizar_sin_espacios(termino_raw)
                 paquetes_directos_exactos = []
                 for nom_pkg, pkg_obj in TODOS_LOS_PAQUETES.items():
                     nom_pkg_norm = normalizar(nom_pkg)
-                    if t_norm_buscado == nom_pkg_norm or t_norm_buscado in nom_pkg_norm or nom_pkg_norm in t_norm_buscado:
+                    nom_pkg_sin_espacios = normalizar_sin_espacios(nom_pkg)
+                    if (
+                        t_norm_buscado == nom_pkg_norm
+                        or t_norm_buscado in nom_pkg_norm
+                        or nom_pkg_norm in t_norm_buscado
+                        or (t_sin_espacios and (t_sin_espacios in nom_pkg_sin_espacios or nom_pkg_sin_espacios in t_sin_espacios))
+                    ):
                         paquetes_directos_exactos.append(pkg_obj)
 
                 paquetes_directos_exactos = desduplicar_paquetes(paquetes_directos_exactos)
@@ -1135,15 +1356,21 @@ with tab_modo_1:
                     }
                     words_clave_buscadas = [w for w in t_norm_buscado.split() if w not in words_ignoradas and len(w) > 1]
 
+                    t_sin_espacios = normalizar_sin_espacios(termino_raw)
                     for item in datos:
                         nom_item = item.get("analito", "")
                         nom_item_norm = normalizar(nom_item)
+                        nom_item_sin_espacios = normalizar_sin_espacios(nom_item)
 
                         match_estricto = False
                         prioridad = 1
                         
-                        # 1. Match si la frase completa o el número/sigla exacta coincide
-                        if t_norm_buscado in nom_item_norm or nom_item_norm in t_norm_buscado:
+                        # 1. Match si la frase completa, el número/sigla o la versión sin guiones/espacios coincide
+                        if (
+                            t_norm_buscado in nom_item_norm
+                            or nom_item_norm in t_norm_buscado
+                            or (t_sin_espacios and (t_sin_espacios in nom_item_sin_espacios or nom_item_sin_espacios in t_sin_espacios))
+                        ):
                             match_estricto = True
                             prioridad = 100  # Máxima prioridad
                         elif words_clave_buscadas and all(w in nom_item_norm.split() for w in words_clave_buscadas):
@@ -1433,6 +1660,7 @@ with tab_modo_3:
         for t_ind in terminos_ind:
             hallados_ind = []
             t_norm_buscado = normalizar(t_ind)
+            t_sin_espacios = normalizar_sin_espacios(t_ind)
             
             words_especificas = [
                 w for w in t_norm_buscado.split() 
@@ -1443,10 +1671,15 @@ with tab_modo_3:
                 if item.get("tipo") in ["single", "individual"]:
                     nom_test = item.get("analito", item.get("nombre", ""))
                     nom_test_norm = normalizar(nom_test)
+                    nom_test_sin_espacios = normalizar_sin_espacios(nom_test)
                     words_estudio = [w for w in nom_test_norm.split() if w not in STOP_WORDS]
 
-                    # 1. Coincidencia exacta o frase contenida
-                    if t_norm_buscado in nom_test_norm or nom_test_norm in t_norm_buscado:
+                    # 1. Coincidencia exacta, frase contenida o sin guiones/espacios
+                    if (
+                        t_norm_buscado in nom_test_norm
+                        or nom_test_norm in t_norm_buscado
+                        or (t_sin_espacios and (t_sin_espacios in nom_test_sin_espacios or nom_test_sin_espacios in t_sin_espacios))
+                    ):
                         hallados_ind.append((item, 100))  # Máxima prioridad
                     else:
                         # 2. Coincidencia por palabras clave
