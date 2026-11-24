@@ -399,7 +399,7 @@ class Catalogo:
                         return pkgs_ord[0]
         return None
 
-# ---------- Pestaña 1: paquetes integrales ----------
+    # ---------- Pestaña 1: paquetes integrales ----------
     def _paquetes_de_analitos_que_coinciden(self, termino):
         """Nombres de paquetes que contienen algún analito que coincide con el término."""
         res = self._cache_match_analito.get(termino)
@@ -452,85 +452,169 @@ class Catalogo:
         )
         return coincidencias
 
+    def _mejor_opcion_individual_o_paquete(self, termino):
+        t_norm = normalizar(termino)
+        t_sin_esp = normalizar_sin_espacios(termino)
+
+        # Nombres normalizados de todas las pruebas que son Singles en self.datos
+        nombres_singles = {
+            normalizar(item.get("analito", item.get("nombre", "")))
+            for item in self.datos
+            if item.get("tipo") in ["single", "individual"]
+        }
+
+        # Filtrar SOLO paquetes reales (excluyendo los singles sueltos)
+        paquetes_reales = {
+            nom_p: p for nom_p, p in self.paquetes.items()
+            if p.get("tipo") not in ["single", "individual"]
+            and normalizar(nom_p) not in nombres_singles
+            and len(self.analitos_de_paquete(nom_p)) > 1
+        }
+
+        # 1. Buscar si el término es directamente un paquete (ej. QS28)
+        pkgs_dir = [
+            p for nom_p, p in paquetes_reales.items()
+            if t_norm == normalizar(nom_p)
+            or t_norm in normalizar(nom_p)
+            or normalizar(nom_p) in t_norm
+            or (t_sin_esp and (t_sin_esp in normalizar_sin_espacios(nom_p) or normalizar_sin_espacios(nom_p) in t_sin_esp))
+        ]
+        mejor_pkg_dir = min(pkgs_dir, key=lambda x: float(x.get("precio", 0.0))) if pkgs_dir else None
+
+        # 2. Buscar el paquete real más barato que contenga el analito
+        pkgs_con_analito = []
+        for nom_p, p in paquetes_reales.items():
+            analitos_p = self.analitos_de_paquete(nom_p)
+            if any(
+                t_norm in normalizar(a)
+                or normalizar(a) in t_norm
+                or (t_sin_esp and (t_sin_esp in normalizar_sin_espacios(a) or normalizar_sin_espacios(a) in t_sin_esp))
+                or coincide_busqueda(termino, a)
+                for a in analitos_p
+            ):
+                if float(p.get("precio", 0.0)) > 0:
+                    pkgs_con_analito.append(p)
+
+        mejor_pkg_analito = (
+            min(pkgs_con_analito, key=lambda x: float(x.get("precio", 0.0)))
+            if pkgs_con_analito
+            else mejor_pkg_dir
+        )
+
+        # 3. Buscar en pruebas individuales (Singles) dentro de self.datos
+        singles_match = []
+        for item in self.datos:
+            if item.get("tipo") in ["single", "individual"]:
+                nom_s = item.get("analito", item.get("nombre", ""))
+                nom_s_norm = normalizar(nom_s)
+                nom_s_sin = normalizar_sin_espacios(nom_s)
+                if (
+                    t_norm == nom_s_norm
+                    or t_norm in nom_s_norm
+                    or (t_sin_esp and (t_sin_esp == nom_s_sin or t_sin_esp in nom_s_sin))
+                    or coincide_busqueda(termino, nom_s)
+                ):
+                    if float(item.get("precio", 0.0)) > 0:
+                        es_exacto = 0 if (t_norm == nom_s_norm or t_sin_esp == nom_s_sin) else 1
+                        singles_match.append((es_exacto, len(nom_s_norm), float(item.get("precio", 0.0)), item))
+
+        singles_match.sort(key=lambda x: (x[0], x[2], x[1]))
+        mejor_single = singles_match[0][3] if singles_match else None
+
+        return {
+            "paquete": mejor_pkg_analito,
+            "precio_paquete": float(mejor_pkg_analito.get("precio", 0.0)) if mejor_pkg_analito else None,
+            "single": mejor_single,
+            "precio_single": float(mejor_single.get("precio", 0.0)) if mejor_single else None,
+        }
+
     def analizar_estrategia_busqueda(self, terminos_raw, paquetes_coincidencias):
         if len(terminos_raw) < 2 or not paquetes_coincidencias:
             return None
 
-        suma_separado = 0.0
+        info_por_termino = {}
         for t in terminos_raw:
-            t_norm = normalizar(t)
-            t_sin_esp = normalizar_sin_espacios(t)
-            precio_t = 0.0
+            info_por_termino[t] = self._mejor_opcion_individual_o_paquete(t)
 
-            pkgs_dir = [
-                p for nom_p, p in self.paquetes.items()
-                if t_norm == normalizar(nom_p)
-                or t_norm in normalizar(nom_p)
-                or normalizar(nom_p) in t_norm
-                or (t_sin_esp and (t_sin_esp in normalizar_sin_espacios(nom_p) or normalizar_sin_espacios(nom_p) in t_sin_esp))
-            ]
-            if pkgs_dir:
-                precio_t = min(p.get("precio", 0.0) for p in pkgs_dir)
-            else:
-                item_f = self.buscar_precio_estudio_o_single(t)
-                if item_f:
-                    precio_t = item_f.get("precio", 0.0)
-                    if precio_t == 0.0 and item_f.get("paquetes"):
-                        precio_t = item_f["paquetes"][0].get("precio", 0.0)
+        # ESCENARIO B: Paquetes más baratos por cada analito (sin cobrar doble un paquete si cubre varios)
+        paquetes_usados_b = {}
+        detalle_b = []
+        for t in terminos_raw:
+            inf = info_por_termino[t]
+            if inf["paquete"]:
+                nom_p = inf["paquete"].get("nombre")
+                paquetes_usados_b[nom_p] = inf["precio_paquete"]
+                detalle_b.append(f"{t.title()} → {nom_p} (${inf['precio_paquete']:,.2f})")
+            elif inf["single"]:
+                nom_s = inf["single"].get("analito", inf["single"].get("nombre"))
+                detalle_b.append(f"{t.title()} → {nom_s} [Single] (${inf['precio_single']:,.2f})")
+        costo_escenario_b = sum(paquetes_usados_b.values()) + sum(
+            info_por_termino[t]["precio_single"]
+            for t in terminos_raw
+            if not info_por_termino[t]["paquete"] and info_por_termino[t]["single"]
+        )
 
-            suma_separado += precio_t
+        # ESCENARIO C: Singles (pruebas sueltas) cuando existan + paquete mínimo solo si no hay single
+        costo_escenario_c = 0.0
+        paquetes_usados_c = {}
+        detalle_c = []
+        tiene_algun_single = False
+        for t in terminos_raw:
+            inf = info_por_termino[t]
+            if inf["single"]:
+                tiene_algun_single = True
+                nom_s = inf["single"].get("analito", inf["single"].get("nombre"))
+                costo_escenario_c += inf["precio_single"]
+                detalle_c.append(f"{nom_s} [Single] (${inf['precio_single']:,.2f})")
+            elif inf["paquete"]:
+                nom_p = inf["paquete"].get("nombre")
+                paquetes_usados_c[nom_p] = inf["precio_paquete"]
+                detalle_c.append(f"{t.title()} → {nom_p} (${inf['precio_paquete']:,.2f})")
+        costo_escenario_c += sum(paquetes_usados_c.values())
 
-        opciones_evaluadas = []
+        # ESCENARIO A: Mejor Paquete Integral + faltantes (usando lo más barato entre single o paquete para lo que falte)
+        opciones_integrales = []
         for match in paquetes_coincidencias:
             pkg = match["datos_paquete"]
             encontrados = set(match["terminos_encontrados"].keys())
             faltantes = [t for t in terminos_raw if t not in encontrados]
 
             costo_faltantes = 0.0
-            items_faltantes = []
+            detalle_faltantes = []
             for f_term in faltantes:
-                f_norm = normalizar(f_term)
-                f_sin_esp = normalizar_sin_espacios(f_term)
-                pkgs_f = [
-                    p for nom_p, p in self.paquetes.items()
-                    if f_norm == normalizar(nom_p)
-                    or f_norm in normalizar(nom_p)
-                    or normalizar(nom_p) in f_norm
-                    or (f_sin_esp and (f_sin_esp in normalizar_sin_espacios(nom_p) or normalizar_sin_espacios(nom_p) in f_sin_esp))
-                ]
-                if pkgs_f:
-                    mejor_p = min(pkgs_f, key=lambda x: x.get("precio", 0.0))
-                    p_f = mejor_p.get("precio", 0.0)
-                    costo_faltantes += p_f
-                    items_faltantes.append((f_term, mejor_p, p_f))
-                else:
-                    item_f = self.buscar_precio_estudio_o_single(f_term)
-                    if item_f:
-                        p_f = item_f.get("precio", 0.0)
-                        if p_f == 0.0 and item_f.get("paquetes"):
-                            p_f = item_f["paquetes"][0].get("precio", 0.0)
-                        costo_faltantes += p_f
-                        items_faltantes.append((f_term, item_f, p_f))
-                    else:
-                        items_faltantes.append((f_term, None, 0.0))
+                inf_f = info_por_termino[f_term]
+                opciones_f = []
+                if inf_f["single"]:
+                    opciones_f.append((inf_f["precio_single"], f"{inf_f['single'].get('analito', f_term)} [Single]"))
+                if inf_f["paquete"]:
+                    opciones_f.append((inf_f["precio_paquete"], f"{inf_f['paquete'].get('nombre')}"))
+                if opciones_f:
+                    mejor_p_f, mejor_nom_f = min(opciones_f, key=lambda x: x[0])
+                    costo_faltantes += mejor_p_f
+                    detalle_faltantes.append(f"{mejor_nom_f} (${mejor_p_f:,.2f})")
 
-            costo_combo = pkg.get("precio", 0.0) + costo_faltantes
-            opciones_evaluadas.append({
+            costo_combo = float(pkg.get("precio", 0.0)) + costo_faltantes
+            opciones_integrales.append({
                 "paquete": pkg,
                 "encontrados": list(encontrados),
                 "faltantes": faltantes,
-                "items_faltantes": items_faltantes,
+                "detalle_faltantes": detalle_faltantes,
                 "costo_faltantes": costo_faltantes,
                 "costo_combo": costo_combo,
             })
 
-        opciones_evaluadas.sort(key=lambda x: (-len(x["encontrados"]), x["costo_combo"]))
+        opciones_integrales.sort(key=lambda x: (-len(x["encontrados"]), x["costo_combo"]))
+        mejor_integral = opciones_integrales[0]
 
         return {
-            "suma_separado": suma_separado,
-            "mejor_opcion": opciones_evaluadas[0],
+            "mejor_integral": mejor_integral,
+            "costo_integral": mejor_integral["costo_combo"],
+            "costo_paquetes_sep": costo_escenario_b,
+            "detalle_paquetes_sep": detalle_b,
+            "costo_singles": costo_escenario_c,
+            "detalle_singles": detalle_c,
+            "tiene_algun_single": tiene_algun_single,
         }
-
     # ---------- Pestaña 2: paquete máster ----------
     def candidatos_master(self, paquetes_seleccionados):
         analitos_totales_map = {}
@@ -1237,41 +1321,112 @@ with tab_modo_1:
         if paquetes_coincidencias:
             with tabs_creadas[tab_index]:
                 estrategia_p1 = CATALOGO.analizar_estrategia_busqueda(terminos_raw, paquetes_coincidencias)
-
                 if estrategia_p1:
-                    suma_sep = estrategia_p1["suma_separado"]
-                    mejor = estrategia_p1["mejor_opcion"]
-                    pkg_mejor = mejor["paquete"]
-                    costo_base_mejor = pkg_mejor.get("precio", 0.0)
-                    costo_combo_p1 = mejor["costo_combo"]
-                    ahorro_p1 = suma_sep - costo_combo_p1
-
-                    st.info(
-                        f"💡 **Resumen de la búsqueda:** Los {len(terminos_raw)} estudios buscados suman aproximadamente **${suma_sep:,.2f} MXN** cotizándolos por separado."
-                    )
+                    mejor_int = estrategia_p1["mejor_integral"]
+                    pkg_mejor = mejor_int["paquete"]
+                    c_int = estrategia_p1["costo_integral"]
+                    c_paq = estrategia_p1["costo_paquetes_sep"]
+                    c_sin = estrategia_p1["costo_singles"]
 
                     st.markdown(
-                        "<h3 class='titulo-azul'>📊 Análisis de Estrategia y Combinaciones Sugeridas</h3>",
+                        "<h3 class='titulo-azul'>📊 Análisis Comparativo de Costos</h3>",
                         unsafe_allow_html=True,
                     )
 
-                    if mejor["faltantes"]:
-                        faltantes_txt = ", ".join([f.title() for f in mejor["faltantes"]])
-                        texto_falt = f"junto con **{faltantes_txt}** (~${mejor['costo_faltantes']:,.2f} MXN)."
-                    else:
-                        texto_falt = "que cubre el **100% de los estudios buscados** directamente."
+                    # Construir opciones con prioridad: 1=singles, 2=paquetes, 3=integral (para desempate limpio)
+                    estrategias_comp = []
 
-                    if ahorro_p1 > 0:
+                    if estrategia_p1["tiene_algun_single"] and c_sin > 0:
+                        estrategias_comp.append({
+                            "costo": c_sin,
+                            "prioridad": 1,
+                            "tipo": "singles",
+                            "titulo": "🧪 Pruebas Individuales (Singles)",
+                            "detalle_lista": estrategia_p1["detalle_singles"],
+                        })
+
+                    if c_paq > 0:
+                        estrategias_comp.append({
+                            "costo": c_paq,
+                            "prioridad": 2,
+                            "tipo": "paquetes",
+                            "titulo": "📦 Paquetes más económicos por estudio",
+                            "detalle_lista": estrategia_p1["detalle_paquetes_sep"],
+                        })
+
+                    det_int = [f"{pkg_mejor.get('nombre')} (${float(pkg_mejor.get('precio', 0.0)):,.2f})"]
+                    if mejor_int["detalle_faltantes"]:
+                        det_int.extend(mejor_int["detalle_faltantes"])
+                    else:
+                        det_int.append("Cubre el 100% de lo buscado")
+
+                    estrategias_comp.append({
+                        "costo": c_int,
+                        "prioridad": 3,
+                        "tipo": "integral",
+                        "titulo": "🌟 Paquete Integral Sugerido",
+                        "detalle_lista": det_int,
+                    })
+
+                    estrategias_comp.sort(key=lambda x: (x["costo"], x["prioridad"]))
+                    ganadora = estrategias_comp[0]
+                    segunda = estrategias_comp[1] if len(estrategias_comp) > 1 else None
+                    ahorro_vs_segunda = (segunda["costo"] - ganadora["costo"]) if segunda else 0.0
+
+                    # Mostrar desglose limpio en columnas (una tarjeta por estrategia)
+                    cols_comp = st.columns(len(estrategias_comp))
+                    for col_c, est_c in zip(cols_comp, estrategias_comp):
+                        with col_c:
+                            es_ganadora = est_c["tipo"] == ganadora["tipo"]
+                            borde = "#16a34a" if es_ganadora else "#cbd5e1"
+                            fondo = "#f0fdf4" if es_ganadora else "#f8fafc"
+                            badge = " ✅ <b>MÁS ECONÓMICA</b>" if es_ganadora else ""
+                            items_html = "".join(
+                                [f"<li style='margin-bottom:3px;'>{it.replace('$', '&#36;')}</li>" for it in est_c["detalle_lista"]]
+                            )
+                            st.markdown(
+                                f"""
+                                <div style="border: 1.5px solid {borde}; background-color: {fondo}; border-radius: 10px; padding: 12px; height: 100%;">
+                                    <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 4px;">
+                                        {est_c['titulo']}{badge}
+                                    </div>
+                                    <div style="font-size: 1.25rem; font-weight: 800; color: #0284c7; margin-bottom: 8px;">
+                                        &#36;{est_c['costo']:,.2f} MXN
+                                    </div>
+                                    <ul style="margin: 0; padding-left: 18px; font-size: 0.85rem; color: #334155;">
+                                        {items_html}
+                                    </ul>
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+
+                    st.write("")
+
+                    # Veredicto final con aviso de Pestaña 3 cuando convienen Singles
+                    ahorro_txt = (
+                        f" (ahorro de **\${ahorro_vs_segunda:,.2f} MXN** respecto a la siguiente opción)"
+                        if ahorro_vs_segunda > 0
+                        else ""
+                    )
+
+                    if ganadora["tipo"] == "singles":
                         st.success(
-                            f"✨ **ESTRATEGIA MÁS ECONÓMICA RECOMENDADA:**\n\n"
-                            f"Conviene ofrecer el paquete **{pkg_mejor.get('nombre')}** (${costo_base_mejor:,.2f} MXN) {texto_falt}\n\n"
-                            f"🪄 **Total Combo Sugerido:** **${costo_combo_p1:,.2f} MXN** — 💰 **¡El paciente se ahorra ${ahorro_p1:,.2f} MXN!**"
+                            f"🏆 **MEJOR OPCIÓN: COTIZAR COMO PRUEBAS INDIVIDUALES (SINGLES)**\n\n"
+                            f"Conviene más venderlos por separado por **\${c_sin:,.2f} MXN**{ahorro_txt}, en lugar del paquete integral (**\${c_int:,.2f} MXN**)."
+                        )
+                        st.info(
+                            "👉 **Tip de cotización:** Para agregar estos estudios individuales a tu presupuesto, búscalos directamente en la **Pestaña 3 (🧪 Buscador de Pruebas Individuales / Singles)**."
+                        )
+                    elif ganadora["tipo"] == "paquetes":
+                        st.success(
+                            f"🏆 **MEJOR OPCIÓN: COMBINAR PAQUETES INDIVIDUALES MÁS ECONÓMICOS**\n\n"
+                            f"Conviene más cotizar cada estudio en su paquete más accesible por **\${c_paq:,.2f} MXN**{ahorro_txt}, en lugar del paquete integral (**\${c_int:,.2f} MXN**)."
                         )
                     else:
-                        st.warning(
-                            f"🏷️ **RECOMENDACIÓN DE PRECIO:**\n\n"
-                            f"El paquete integral más cercano (**{pkg_mejor.get('nombre')}**) tiene un costo total de **${costo_combo_p1:,.2f} MXN**.\n\n"
-                            f"🪄 **Conviene más cotizar los estudios buscados por separado por ~${suma_sep:,.2f} MXN.**"
+                        st.success(
+                            f"🏆 **MEJOR OPCIÓN: PAQUETE INTEGRAL ({pkg_mejor.get('nombre')})**\n\n"
+                            f"Sale más conveniente llevarse el paquete integral por **\${c_int:,.2f} MXN**{ahorro_txt}."
                         )
 
                     st.divider()
@@ -1657,81 +1812,63 @@ with tab_modo_3:
     if busqueda_ind_input:
         terminos_ind = separar_terminos_respetando_parentesis(busqueda_ind_input)
 
-        for t_ind in terminos_ind:
-            hallados_ind = []
-            t_norm_buscado = normalizar(t_ind)
-            t_sin_espacios = normalizar_sin_espacios(t_ind)
-            
-            words_especificas = [
-                w for w in t_norm_buscado.split() 
-                if w not in WORDS_GENERICAS and len(w) > 1
-            ]
+        if len(terminos_ind) > 1:
+            tabs_ind_creadas = st.tabs([f"🧪 {t.title()}" for t in terminos_ind])
+        else:
+            tabs_ind_creadas = None
 
-            for item in datos:
-                if item.get("tipo") in ["single", "individual"]:
-                    nom_test = item.get("analito", item.get("nombre", ""))
-                    nom_test_norm = normalizar(nom_test)
-                    nom_test_sin_espacios = normalizar_sin_espacios(nom_test)
-                    words_estudio = [w for w in nom_test_norm.split() if w not in STOP_WORDS]
+        for idx_ind, t_ind in enumerate(terminos_ind):
+            contenedor_ind = tabs_ind_creadas[idx_ind] if tabs_ind_creadas else st.container()
+            with contenedor_ind:
+                hallados_ind = []
+                t_norm_buscado = normalizar(t_ind)
+                t_sin_espacios = normalizar_sin_espacios(t_ind)
 
-                    # 1. Coincidencia exacta, frase contenida o sin guiones/espacios
-                    if (
-                        t_norm_buscado in nom_test_norm
-                        or nom_test_norm in t_norm_buscado
-                        or (t_sin_espacios and (t_sin_espacios in nom_test_sin_espacios or nom_test_sin_espacios in t_sin_espacios))
-                    ):
-                        hallados_ind.append((item, 100))  # Máxima prioridad
-                    else:
-                        # 2. Coincidencia por palabras clave
-                        if words_especificas and any(w in words_estudio for w in words_especificas):
-                            coincidencias_cnt = sum(1 for w in words_especificas if w in words_estudio)
-                            hallados_ind.append((item, coincidencias_cnt))
+                words_especificas = [
+                    w for w in t_norm_buscado.split()
+                    if w not in WORDS_GENERICAS and len(w) > 1
+                ]
 
-            if hallados_ind:
-                # ORDENAR PRIMERO POR RELEVANCIA Y LUEGO POR PRECIO
-                hallados_ind_ordenados = sorted(
-                    hallados_ind, 
-                    key=lambda x: (-x[1], float(x[0].get("precio", 0.0)))
-                )
+                for item in datos:
+                    if item.get("tipo") in ["single", "individual"]:
+                        nom_test = item.get("analito", item.get("nombre", ""))
+                        nom_test_norm = normalizar(nom_test)
+                        nom_test_sin_espacios = normalizar_sin_espacios(nom_test)
+                        words_estudio = [w for w in nom_test_norm.split() if w not in STOP_WORDS]
 
-                st.markdown(f"#### ✨ Resultados para: \"{t_ind.title()}\"")
+                        # 1. Coincidencia exacta, frase contenida o sin guiones/espacios
+                        if (
+                            t_norm_buscado in nom_test_norm
+                            or nom_test_norm in t_norm_buscado
+                            or (t_sin_espacios and (t_sin_espacios in nom_test_sin_espacios or nom_test_sin_espacios in t_sin_espacios))
+                        ):
+                            hallados_ind.append((item, 100))  # Máxima prioridad
+                        else:
+                            # 2. Coincidencia por palabras clave
+                            if words_especificas and any(w in words_estudio for w in words_especificas):
+                                coincidencias_cnt = sum(1 for w in words_especificas if w in words_estudio)
+                                hallados_ind.append((item, coincidencias_cnt))
 
-                # SEPARAR EN TOP 3 Y RESTO DE RESULTADOS
-                top_singles = hallados_ind_ordenados[:3]
-                resto_singles = hallados_ind_ordenados[3:]
+                if hallados_ind:
+                    # ORDENAR PRIMERO POR RELEVANCIA Y LUEGO POR PRECIO
+                    hallados_ind_ordenados = sorted(
+                        hallados_ind,
+                        key=lambda x: (-x[1], float(x[0].get("precio", 0.0)))
+                    )
 
-                # 1. Renderizar los primeros 3 resultados
-                for idx, res_tuple in enumerate(top_singles):
-                    res_i = res_tuple[0]
-                    n_i = res_i.get("analito", res_i.get("nombre", "Prueba"))
-                    p_i = res_i.get("precio", 0.0)
+                    st.markdown(f"#### ✨ Resultados para: \"{t_ind.title()}\"")
 
-                    with st.expander(f"🧪 **{n_i}** — 💰 **${p_i:,.2f} MXN**", expanded=True):
-                        col_info, col_add, col_det = st.columns([2.5, 1, 1])
+                    # SEPARAR EN TOP 3 Y RESTO DE RESULTADOS
+                    top_singles = hallados_ind_ordenados[:3]
+                    resto_singles = hallados_ind_ordenados[3:]
 
-                        with col_info:
-                            st.markdown(f"💉 **Tipo de muestra:** {res_i.get('tipo_muestra', 'N/A')}")
-                            st.markdown(f"📜 **Indicaciones:** {res_i.get('indicaciones', 'N/A')}")
-                            st.markdown(f"⏳ **Tiempo de entrega:** {res_i.get('tiempo_entrega', 'N/A')}")
+                    # 1. Renderizar los primeros 3 resultados
+                    for idx, res_tuple in enumerate(top_singles):
+                        res_i = res_tuple[0]
+                        n_i = res_i.get("analito", res_i.get("nombre", "Prueba"))
+                        p_i = res_i.get("precio", 0.0)
 
-                        with col_add:
-                            if st.button("➕ Agregar", key=f"btn_add_p3_{n_i}_{t_ind}_{idx}", use_container_width=True):
-                                agregar_al_carrito(res_i)
-                                st.rerun()
-
-                        with col_det:
-                            if st.button("🫆 Detalles", key=f"btn_det_p3_{n_i}_{t_ind}_{idx}", use_container_width=True):
-                                mostrar_modal_detalles(res_i)
-
-                # 2. Renderizar el resto dentro de un expander si hay más de 3
-                if resto_singles:
-                    with st.expander(f"✨ **Ver {len(resto_singles)} resultados individuales más relacionados...**"):
-                        for idx, res_tuple in enumerate(resto_singles):
-                            res_i = res_tuple[0]
-                            n_i = res_i.get("analito", res_i.get("nombre", "Prueba"))
-                            p_i = res_i.get("precio", 0.0)
-
-                            st.markdown(f"**{n_i}** — 💰 **${p_i:,.2f} MXN**")
+                        with st.expander(f"🧪 **{n_i}** — 💰 **${p_i:,.2f} MXN**", expanded=True):
                             col_info, col_add, col_det = st.columns([2.5, 1, 1])
 
                             with col_info:
@@ -1740,14 +1877,39 @@ with tab_modo_3:
                                 st.markdown(f"⏳ **Tiempo de entrega:** {res_i.get('tiempo_entrega', 'N/A')}")
 
                             with col_add:
-                                if st.button("➕ Agregar", key=f"btn_add_resto_{n_i}_{t_ind}_{idx}", use_container_width=True):
+                                if st.button("➕ Agregar", key=f"btn_add_p3_{idx_ind}_{n_i}_{t_ind}_{idx}", use_container_width=True):
                                     agregar_al_carrito(res_i)
                                     st.rerun()
 
                             with col_det:
-                                if st.button("🫆 Detalles", key=f"btn_det_resto_{n_i}_{t_ind}_{idx}", use_container_width=True):
+                                if st.button("🫆 Detalles", key=f"btn_det_p3_{idx_ind}_{n_i}_{t_ind}_{idx}", use_container_width=True):
                                     mostrar_modal_detalles(res_i)
-                            st.divider()
 
-            else:
-                st.warning(f"⚠️ No se encontró la prueba \"{t_ind}\" en la lista de Pruebas Individuales / Singles.")
+                    # 2. Renderizar el resto dentro de un expander si hay más de 3
+                    if resto_singles:
+                        with st.expander(f"✨ **Ver {len(resto_singles)} resultados individuales más relacionados...**"):
+                            for idx, res_tuple in enumerate(resto_singles):
+                                res_i = res_tuple[0]
+                                n_i = res_i.get("analito", res_i.get("nombre", "Prueba"))
+                                p_i = res_i.get("precio", 0.0)
+
+                                st.markdown(f"**{n_i}** — 💰 **${p_i:,.2f} MXN**")
+                                col_info, col_add, col_det = st.columns([2.5, 1, 1])
+
+                                with col_info:
+                                    st.markdown(f"💉 **Tipo de muestra:** {res_i.get('tipo_muestra', 'N/A')}")
+                                    st.markdown(f"📜 **Indicaciones:** {res_i.get('indicaciones', 'N/A')}")
+                                    st.markdown(f"⏳ **Tiempo de entrega:** {res_i.get('tiempo_entrega', 'N/A')}")
+
+                                with col_add:
+                                    if st.button("➕ Agregar", key=f"btn_add_resto_{idx_ind}_{n_i}_{t_ind}_{idx}", use_container_width=True):
+                                        agregar_al_carrito(res_i)
+                                        st.rerun()
+
+                                with col_det:
+                                    if st.button("🫆 Detalles", key=f"btn_det_resto_{idx_ind}_{n_i}_{t_ind}_{idx}", use_container_width=True):
+                                        mostrar_modal_detalles(res_i)
+                                st.divider()
+
+                else:
+                    st.warning(f"⚠️ No se encontró la prueba \"{t_ind}\" en la lista de Pruebas Individuales / Singles.")
